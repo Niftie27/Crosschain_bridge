@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useDispatch } from 'react-redux'
 import { Container } from 'react-bootstrap'
 import { ethers } from 'ethers'
 
@@ -6,57 +7,55 @@ import { ethers } from 'ethers'
 import Navigation from './Navigation';
 import Loading from './Loading';
 
-// ABIs: Import your contract ABIs here
-// import TOKEN_ABI from '../abis/Token.json'
-
-// Config: Import your network config here
-// import config from '../config.json';
+import {
+  loadProvider,
+  loadNetwork,
+  loadAccount
+} from '../store/interactions'
 
 function App() {
-  const [account, setAccount] = useState(null)
-  const [balance, setBalance] = useState(0)
 
-  const [isLoading, setIsLoading] = useState(true)
+  const dispatch = useDispatch()
 
   const loadBlockchainData = async () => {
     // Initiate provider
-    const provider = new ethers.providers.Web3Provider(window.ethereum)
+    const provider = await loadProvider(dispatch)
 
-    // Fetch accounts
-    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
-    const account = ethers.utils.getAddress(accounts[0])
-    setAccount(account)
+    // Fetch current network's chainId (e.g. hardhat: 31337, kovan: 42)
+    const chainId = await loadNetwork(provider, dispatch)
 
-    // Fetch account balance
-    let balance = await provider.getBalance(account)
-    balance = ethers.utils.formatUnits(balance, 18)
-    setBalance(balance)
+    // Reload page when network changes
+    window.ethereum.on('chainChanged', () => {
+      window.location.reload()
+    })
 
-    setIsLoading(false)
+    // Fetch current account from Metamask when changed
+    window.ethereum.on('accountsChanged', async () => {
+      await loadAccount(dispatch)
+    })
+
+    // Initiate contracts
+    // await loadTokens(provider, chainId, dispatch)
+    // setIsLoading(false)
   }
 
   useEffect(() => {
-    if (isLoading) {
-      loadBlockchainData()
-    }
-  }, [isLoading]);
+    loadBlockchainData()
+  }, []);
 
-  return(
+    return (
+  <>
+    <Navigation />
+
     <Container>
-      <Navigation account={account} />
-
       <h1 className='my-4 text-center'>React Hardhat Template</h1>
-
-      {isLoading ? (
-        <Loading />
-      ) : (
-        <>
-          <p className='text-center'><strong>Your ETH Balance:</strong> {balance} ETH</p>
-          <p className='text-center'>Edit App.js to add your code here.</p>
-        </>
-      )}
+      <p className='text-center'><strong>Your ETH Balance:</strong> ETH</p>
+      <p className='text-center'>Edit App.js to add your code here.</p>
+      <div style={{ height: '200vh' }} />
     </Container>
+  </>
   )
 }
 
 export default App;
+
