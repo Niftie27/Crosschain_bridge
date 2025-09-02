@@ -1,0 +1,436 @@
+/* Make native controls adapt to theme */
+.transfer-container { color-scheme: light dark; }
+
+/* ===============================
+   THEME TOKENS (light / dark)
+   =============================== */
+:root[data-bs-theme="dark"] {
+  --page: #0b0f16;
+  --card: #141a24;          /* main card */
+  --row:  #0f1623;          /* input rows */
+  --chip: #0c131f;          /* token chip / swap btn */
+  --hover: rgba(255,255,255,.06);
+
+  --text: #e6eaf1;
+  --text-2: #a9b0bd;
+  --text-3: #7b8496;
+
+  --border-1: rgba(255,255,255,.08);
+  --border-2: rgba(255,255,255,.12);
+
+  --ring: rgba(59,130,246,.45);
+  --shadow: 0 20px 60px rgba(0,0,0,.45);
+
+  --brand-1: #2a6df6;       /* deep blue */
+  --brand-2: #00c2ff;       /* cyan */
+}
+
+:root[data-bs-theme="light"] {
+  --page: #f6f7fb;
+  --card: #ffffff;
+  --row:  #f7f9fc;
+  --chip: #eef2f7;
+  --hover: rgba(0,0,0,.06);
+
+  --text: #0e1420;
+  --text-2: #607086;
+  --text-3: #8a97aa;
+
+  --border-1: rgba(0,0,0,.08);
+  --border-2: rgba(0,0,0,.12);
+
+  --ring: rgba(37,99,235,.35);
+  --shadow: 0 18px 50px rgba(2, 8, 23, .10);
+
+  --brand-1: #2a6df6;
+  --brand-2: #00c2ff;
+}
+
+/* ===============================
+   CENTER + SCALE THE WHOLE CARD
+   =============================== */
+
+/* set this if you have a fixed navbar height (e.g. 64px) */
+:root {
+  --nav-offset: 0px;
+}
+
+.transfer-container {
+  /* global scale (1 = original) */
+  --ui-scale: 1.15;
+  --card-width: 560px;            /* base width before scaling */
+
+  width: 100%;
+  max-width: calc(var(--card-width) * var(--ui-scale));
+
+  /* center in viewport */
+  min-height: calc(100dvh - var(--nav-offset));
+  display: grid;
+  place-items: center;
+
+  margin: 0 auto;
+  padding: 24px 16px;
+
+  /* nudge entire card up/down without affecting layout flow */
+  transform: translateY(var(--center-shift-y));
+  /* optional page background:
+  background: var(--page);
+  */
+}
+
+/* Scale the visual card and keep it centered */
+.transfer-container .xy-card {
+  width: var(--card-width);
+  transform: scale(var(--ui-scale));
+  transform-origin: center;
+  margin: 0 auto;
+}
+
+/* Prevent overflow on small screens */
+@media (max-width: 640px) {
+  .transfer-container {
+    --ui-scale: 1;
+    --center-shift-y: 0px;
+    min-height: auto;
+    padding: 16px;
+  }
+  .transfer-container .xy-card { width: 100%; }
+}
+
+/* a touch lower on wider screens (kept for consistency) */
+@media (min-width: 768px) {
+  .transfer-container { /* centered by grid now */ }
+}
+
+/* ===============================
+   CARD — rounder corners, soft shadow
+   =============================== */
+.xy-card,
+.transfer-card {
+  background: var(--card) !important;
+  border: 1px solid var(--border-2) !important;
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+  color: var(--text);
+}
+
+.xy-body,
+.transfer-card .card-body {
+  padding: 20px;
+}
+
+/* ===============================
+   COMMON ELEMENTS (if present)
+   =============================== */
+.xy-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+.xy-title  { margin:0; font-size:20px; line-height:24px; font-weight:600; color:var(--text); }
+
+.xy-actions { display:flex; gap:8px; }
+
+/* ICON BUTTON — robust + thin (24px icon @ 2px stroke) */
+button.xy-iconbtn{
+  appearance:none; -webkit-appearance:none;
+  box-sizing:border-box;
+  -webkit-tap-highlight-color: transparent;
+
+  display:inline-grid; place-items:center;
+  width:36px; aspect-ratio:1 / 1;
+  padding:0; line-height:1; vertical-align:middle;
+
+  border:1px solid var(--border-2);
+  border-radius:12px; /* change to 9999px for a circle */
+  background:var(--chip);
+  color:var(--text);
+  cursor:pointer;
+
+  transition: background .15s ease, border-color .2s ease, box-shadow .15s ease, transform .05s ease;
+}
+button.xy-iconbtn:hover{ background:var(--hover); }
+button.xy-iconbtn:active{ transform: translateY(0.5px); }
+button.xy-iconbtn:focus-visible{ outline:2px solid var(--ring); outline-offset:2px; }
+button.xy-iconbtn[disabled]{ opacity:.6; pointer-events:none; }
+
+/* Make the SVG render crisply and with the intended stroke thickness */
+button.xy-iconbtn svg{
+  display:block;
+  width:24px; height:24px;            /* native size for 2px stroke */
+  vector-effect: non-scaling-stroke;  /* keep the line weight crisp */
+}
+
+/* Optional variants */
+.xy-iconbtn--circle{ border-radius:9999px; }
+.xy-iconbtn--sm{ width:32px; }
+.xy-iconbtn--lg{ width:44px; }
+
+/* ===============================
+   NETWORKS BAR (chains)
+   =============================== */
+.xy-netbar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px; /* space before the FROM row */
+}
+.xy-netcol { display: grid; gap: 6px; }
+
+/* make chips full width in the netbar */
+.xy-netbar .xy-token { width: 100%; }
+
+/* align logo + text nicely */
+.xy-chain .xy-token-meta { align-items: center; }
+
+/* push chevron (caron) to the far right */
+.xy-chain.xy-token { justify-content: space-between; gap: 10px; }
+.xy-chain.xy-token > svg { flex: 0 0 auto; margin-left: 8px; }
+
+/* text stack and alignment just for chain chips */
+.xy-chain .xy-token-text{
+  display: grid;              /* two-line stack: name + sublabel */
+  gap: 2px;
+  min-width: 0;               /* allow ellipsis */
+  justify-items: start;       /* left-align both lines as a block */
+  text-align: left;           /* ensure text itself is left-aligned */
+}
+
+/* long names like "Ethereum Sepolia" won't wrap */
+.xy-chain .xy-token-symbol{
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* show "Testnet" directly under the name */
+.xy-chain .xy-token-name{
+  font-size: 12px;
+  color: var(--text-2);
+  white-space: nowrap;
+  line-height: 1.1;           /* snug spacing under the name */
+}
+
+/* ===============================
+   dropdown menu for tokens & chains
+   =============================== */
+
+.dropdown-menu.xy-menu {
+  background: var(--card);
+  border: 1px solid var(--border-2);
+  border-radius: 12px;
+  min-width: 100%; /* matches the trigger width; change to 220px if you prefer fixed */
+  padding: 6px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.28); /* softer, cleaner */
+}
+
+.dropdown-item.xy-menu-item {
+  display: flex;              /* ✅ align logo + text in a row */
+  align-items: center;        /* ✅ vertical centering */
+  gap: 10px;                  /* ✅ spacing between logo/text */
+  padding: 8px 10px;
+  border-radius: 10px;        /* ✅ matches chip rounding */
+  color: var(--text);
+  background: transparent;    /* ✅ ensure transparent by default */
+}
+
+.dropdown-item.xy-menu-item:hover,
+.dropdown-item.xy-menu-item:focus,
+.dropdown-item.xy-menu-item.active {
+  background: var(--hover);
+  color: var(--text);
+  outline: none;
+}
+
+/* active selection highlight */
+.dropdown-item.xy-menu-item.active {
+  background: color-mix(in srgb, var(--brand-1) 16%, transparent);
+  color: var(--text);
+}
+
+/* ✅ child layout so logos/text match your chips */
+.xy-menu .xy-token-logo {
+  width: 28px; height: 28px;
+  border-radius: 10px;
+  overflow: hidden;
+  display: grid; place-items: center;
+}
+.xy-menu .xy-token-logo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.xy-menu .xy-token-text { display: flex; flex-direction: column; line-height: 1.05; }
+.xy-menu .xy-token-symbol { font-weight: 700; color: var(--text); }
+.xy-menu .xy-token-name { font-size: 12px; color: var(--text-2); white-space: nowrap; }
+
+
+
+/* ===============================
+   ROW BLOCKS (amount sections)
+   =============================== */
+.xy-row {
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  background:var(--row); border:1px solid var(--border-1);
+  border-radius:14px; padding:14px; position:relative;
+}
+.xy-left { display:grid; grid-template-columns:1fr; gap:2px; min-width:0; }
+.xy-label { font-size:12px; line-height:16px; color:var(--text-3); }
+.xy-amount {
+  background:transparent; border:0; outline:none; width:100%;
+  color:var(--text); font-size:26px; line-height:30px; font-weight:600;
+}
+.xy-amount::placeholder { color:var(--text-3); }
+.xy-sub { font-size:12px; line-height:16px; color:var(--text-2); }
+
+/* ===============================
+   TOKEN CHIPS (shared)
+   =============================== */
+.xy-token {
+  display:inline-flex; align-items:center; gap:10px;
+  padding:8px 10px; border-radius:12px;
+  border:1px solid var(--border-2);
+  background:var(--chip); color:var(--text); cursor:pointer;
+  transition:background .15s ease, border-color .2s ease;
+}
+.xy-token:hover { background:var(--hover); }
+.xy-token-meta { display:inline-flex; align-items:center; gap:10px; }
+.xy-token-logo { width:28px; height:28px; border-radius:10px; overflow:hidden; display:grid; place-items:center; }
+.xy-token-logo img { width:100%; height:100%; object-fit:cover; display:block; }
+.xy-token-text { display:flex; flex-direction:column; line-height:1.05; }
+.xy-token-symbol { font-weight:700; color:var(--text); }
+.xy-token-name { font-size:12px; color:var(--text-2); }
+.xy-softdisk { fill: currentColor; opacity:.22; }
+
+/* ===============================
+   Mid-card swap — add vertical space
+   =============================== */
+.xy-swap-wrap { display:grid; place-items:center; margin:0; }      /* reset negative margin */
+.xy-row + .xy-swap-wrap { margin-top: 16px; }                       /* FROM → swap gap */
+.xy-swap-wrap + .xy-row { margin-top: 16px; }                       /* swap → TO gap */
+@media (min-width: 768px) {
+  .xy-row + .xy-swap-wrap,
+  .xy-swap-wrap + .xy-row { margin-top: 14px; }
+}
+
+.xy-swap {
+  width:44px; height:44px; display:inline-flex; align-items:center; justify-content:center;
+  border-radius:12px; border:1px solid var(--border-2);
+  background:var(--chip); color:var(--text);
+  transition:background .15s ease, transform .2s ease;
+}
+.xy-swap:hover { background:var(--hover); }
+@media (prefers-reduced-motion:no-preference){ .xy-swap:active { transform: rotate(180deg); } }
+
+/* ===============================
+   Address block / warning (optional)
+   =============================== */
+.xy-address {
+  display:grid; grid-template-columns:1fr auto; gap:8px;
+  background:var(--row); border:1px solid var(--border-1);
+  border-radius:12px; padding:10px 12px;
+}
+.xy-address-input { background:transparent; border:0; outline:0; color:var(--text); font-size:14px; }
+.xy-address-input::placeholder { color:var(--text-3); }
+.xy-paste {
+  padding:6px 10px; border-radius:10px; border:1px solid var(--border-2);
+  background:var(--chip); color:var(--text); cursor:pointer; transition:background .15s ease;
+}
+.xy-paste:hover { background:var(--hover); }
+.xy-warning { display:flex; gap:8px; align-items:center; color:var(--text-2); font-size:12px; line-height:16px; }
+
+/* ===============================
+   Footer meta
+   =============================== */
+.xy-meta {
+  display: flex;
+  justify-content: space-between;   /* left ↔ right */
+  align-items: center;
+  gap: 8px;
+  color: var(--text-2);
+  font-size: 14px;
+  padding-top: 12px;
+  margin-top: 8px;
+  border-top: 1px dashed var(--border-1);
+  flex-wrap: nowrap;                /* keep on one line */
+}
+
+.xy-meta > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* space below Exchange Rate before the Connect button */
+.xy-cta { 
+  margin-top: 16px; 
+}
+@media (min-width: 768px) {
+  .xy-cta { margin-top: 20px; }
+}
+
+/* Keep Exchange Rate tight to the TO row */
+.xy-row + .xy-meta {
+  margin-top: 8px;     /* small gap above the meta row */
+  padding-top: 1px;    /* light breathing room with the dashed border */
+}
+
+/* Push the Connect button farther down */
+.xy-cta {
+  margin-top: 24px;
+}
+@media (min-width: 768px) {
+  .xy-cta { margin-top: 28px; }
+}
+
+/* ===============================
+   CONNECT BUTTON — consistent with navbar
+   =============================== */
+.xy-cta {
+  width: 100%;
+  height: 52px;
+
+  border-radius: 14px !important;
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff !important;
+
+  /* same softened-right gradient as navbar */
+  background-image:
+    linear-gradient(to right,
+      rgba(0,0,0,0) 0%,
+      rgba(0,0,0,.06) 65%,
+      rgba(0,0,0,.12) 100%
+    ),
+    linear-gradient(93deg,
+      var(--brand-1) 0%,
+      var(--brand-2) 100%
+    ) !important;
+
+  /* toned-down glow for readability */
+  box-shadow:
+    0 6px 18px rgba(0, 194, 255, 0.14),
+    0 2px 6px rgba(2, 8, 23, 0.12) !important;
+
+  transition: filter .15s ease;
+
+  /* crisper text */
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+
+  /* allow theme-aware border below (don’t force border:none) */
+  border: 1px solid transparent !important;
+}
+
+.xy-cta:hover { filter: brightness(1.06); }
+.xy-cta:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+/* subtle border like navbar (theme-aware) */
+:root[data-bs-theme="dark"]  .xy-cta { border-color: rgba(255,255,255,.08) !important; }
+:root[data-bs-theme="light"] .xy-cta { border-color: rgba(0,0,0,.06) !important; }
+
+/* If your old markup uses .connect-wallet-btn, give it the same look */
+.connect-wallet-btn {
+  width:100%; height:52px;
+  border:none !important; border-radius:14px !important;
+  font-size:16px; font-weight:600; color:#fff !important;
+  background-image: linear-gradient(93deg, var(--brand-1) 0%, var(--brand-2) 100%) !important;
+  box-shadow: 0 12px 36px rgba(0, 194, 255, 0.25) !important;
+  transition: filter .15s ease;
+}
+.connect-wallet-btn:hover { filter: brightness(1.06); }
+.connect-wallet-btn:focus-visible { outline:2px solid var(--ring); outline-offset:2px; }

@@ -1,0 +1,59 @@
+/* Navigation.css */
+
+/* Theme variables the navbar relies on */
+:root[data-bs-theme="light"] {
+  --nav-divider: rgba(0,0,0,.08);
+  --ring: rgba(37,99,235,.35);
+}
+
+:root[data-bs-theme="dark"] {
+  --nav-divider: rgba(255,255,255,.12);
+  --ring: rgba(59,130,246,.45);
+}
+
+/* Match TransferCard gradient (with fallbacks),
+   but reduce glow and soften the right edge for readability */
+.btn-connect {
+  border: none !important;
+  border-radius: 14px !important;
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff !important;
+
+  /* Right-edge soft shade overlay + base brand gradient */
+  background-image:
+    linear-gradient(to right,
+      rgba(0,0,0,0) 0%,
+      rgba(0,0,0,.06) 65%,
+      rgba(0,0,0,.12) 100%
+    ),
+    linear-gradient(93deg,
+      var(--brand-1, #2a6df6) 0%,
+      var(--brand-2, #00c2ff) 100%
+    ) !important;
+
+  /* Toned-down glow for clearer text */
+  box-shadow:
+    0 6px 18px rgba(0, 194, 255, 0.14),
+    0 2px 6px rgba(2, 8, 23, 0.12) !important;
+
+  /* Sharper text */
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+
+  /* Navbar-friendly sizing */
+  height: 40px;
+  padding: 0 16px;
+  line-height: 40px;
+}
+
+/* Subtle border to improve contrast against backgrounds */
+:root[data-bs-theme="dark"] .btn-connect { border: 1px solid rgba(255,255,255,.08); }
+:root[data-bs-theme="light"] .btn-connect { border: 1px solid rgba(0,0,0,.06); }
+
+.btn-connect:hover { filter: brightness(1.06); }
+
+.btn-connect:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}

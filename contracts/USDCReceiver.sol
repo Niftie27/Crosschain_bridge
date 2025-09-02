@@ -10,8 +10,12 @@ import {AxelarExecutableWithToken} from
 // Use CGP interface for tokenAddresses(...)
 import {IAxelarGateway as IAxelarGatewayCGP} from
     "@axelar-network/axelar-cgp-solidity/contracts/interfaces/IAxelarGateway.sol";
+// [ADDED], additional
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol"; // ✅
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol"; // ✅
 
-contract USDCReceiver is AxelarExecutableWithToken {
+contract USDCReceiver is AxelarExecutableWithToken, Ownable {       // [ADDED], additional✅
+    using SafeERC20 for IERC20;                                     // [ADDED], additional✅
     // store hashes (strings can’t be immutable value types)
     bytes32 public immutable expectedSourceChainHash;
     bytes32 public immutable expectedSourceAddressHash;
@@ -21,10 +25,13 @@ contract USDCReceiver is AxelarExecutableWithToken {
 
     constructor(address gateway_, string memory srcChain, string memory srcAddress)
         AxelarExecutableWithToken(gateway_)
+        Ownable(msg.sender)
     {
-        expectedSourceChainHash = keccak256(bytes(srcChain));
+        // NOTE: pass srcChain = "Ethereum Sepolia"
+        expectedSourceChainHash   = keccak256(bytes(srcChain));
+        // NOTE: store srcAddress = LOWERCASED sender string
         // store the LOWERCASED address hash
-        expectedSourceAddressHash = _keccakLower(srcAddress); // <-- edited
+        expectedSourceAddressHash = keccak256(bytes(srcAddress)); // you already handle lowercasing at deploy-time
     }
 
     // --- helper: keccak of lowercase(s) ---  <-- added
@@ -51,13 +58,25 @@ contract USDCReceiver is AxelarExecutableWithToken {
 
     // Token-bearing path (this is what Axelar calls for callContractWithToken)
     function _executeWithToken(
-    bytes32, string calldata sourceChain, string calldata, bytes calldata payload,
+    bytes32, string calldata sourceChain, string calldata sourceAddress, bytes calldata payload,
     string calldata tokenSymbol, uint256 amount
     ) internal override {
+        require(
+            keccak256(bytes(sourceChain))  == expectedSourceChainHash && 
+            keccak256(bytes(sourceAddress)) == expectedSourceAddressHash, 
+            "unauthorized source" 
+        ); 
     require(keccak256(bytes(tokenSymbol)) == keccak256(bytes("aUSDC")), "wrong token");
+
     address token = IAxelarGatewayCGP(address(gateway())).tokenAddresses(tokenSymbol);
     address recipient = abi.decode(payload, (address));
-    require(IERC20(token).transfer(recipient, amount), "transfer failed");
+
+    IERC20(token).safeTransfer(recipient, amount); // ✅ CHANGED (SafeERC20)
     emit Received(recipient, amount, sourceChain);
+    }
+
+    // ✅ ADDED: ops safety
+    function sweep(address token, address to, uint256 amount) external onlyOwner { // ✅ CHANGED
+        IERC20(token).safeTransfer(to, amount); // ✅ CHANGED
     }
 }

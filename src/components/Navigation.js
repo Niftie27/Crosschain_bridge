@@ -4,6 +4,8 @@ import Button from 'react-bootstrap/Button'
 import Form from 'react-bootstrap/Form'
 import Blockies from 'react-blockies'
 import ThemeSwitcher from './ThemeSwitcher'   // + add
+import './Navigation.css';
+
 
 import logo from '../logo.png';
 
@@ -75,7 +77,7 @@ return (
               color="#2187D0" bgColor="#F1F2F9" spotColor="#767F92" />
             </div>
           ) : (
-            <Button onClick={connectHandler}>Connect</Button>
+            <Button onClick={connectHandler} className="btn-connect">Connect</Button>
           )}
 
           <ThemeSwitcher /> {/* ← sits on the same row */}

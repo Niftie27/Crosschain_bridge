@@ -6,6 +6,7 @@ import { ethers } from 'ethers'
 // Components
 import Navigation from './Navigation';
 import Loading from './Loading';
+import TransferCard from './TransferCard';
 
 import {
   loadProvider,
@@ -48,10 +49,7 @@ function App() {
     <Navigation />
 
     <Container>
-      <h1 className='my-4 text-center'>React Hardhat Template</h1>
-      <p className='text-center'><strong>Your ETH Balance:</strong> ETH</p>
-      <p className='text-center'>Edit App.js to add your code here.</p>
-      <div style={{ height: '200vh' }} />
+      <TransferCard></TransferCard>
     </Container>
   </>
   )

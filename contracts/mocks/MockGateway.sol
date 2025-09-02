@@ -47,8 +47,9 @@ contract MockGateway {
         // In the mock: we only record the arguments so your test can check them.
     }
 
+    // [ADDED] AxelarExecutableWithToken expects this to exist on the gateway, additional
     // Axelar GMP base calls this on the gateway during executeWithToken(...)
-    function validateContractCallAndMint(
+    function validateContractCallAndMint( // ✅ ADDED (stub expected by Axelar base)
         bytes32 /*commandId*/,
         string calldata /*sourceChain*/,
         string calldata /*sourceAddress*/,
@@ -58,7 +59,6 @@ contract MockGateway {
     ) external pure returns (bool) {
         return true; // accept everything in tests
     }
-
 
     // Test helper: Simulate Axelar delivering msg+token to the receiver (includes commandId) (the magic button)
     // pretends to be Axelar delivering the cross-chain message + tokens.
