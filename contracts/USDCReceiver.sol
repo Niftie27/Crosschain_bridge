@@ -1,24 +1,23 @@
 // SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-// [ ] to do list task
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-// NOTE: use the WithToken base (your current AxelarExecutable is msg-only)
-import {AxelarExecutableWithToken} from
+// Axelar
+import { AxelarExecutableWithToken } from
     "@axelar-network/axelar-gmp-sdk-solidity/contracts/executable/AxelarExecutableWithToken.sol";
-// Use CGP interface for tokenAddresses(...)
-import {IAxelarGateway as IAxelarGatewayCGP} from
+import { IAxelarGateway as IAxelarGatewayCGP } from
     "@axelar-network/axelar-cgp-solidity/contracts/interfaces/IAxelarGateway.sol";
-// [ADDED], additional
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol"; // ✅
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol"; // ✅
 
-contract USDCReceiver is AxelarExecutableWithToken, Ownable {       // [ADDED], additional✅
-    using SafeERC20 for IERC20;                                     // [ADDED], additional✅
-    // store hashes (strings can’t be immutable value types)
+contract USDCReceiver is AxelarExecutableWithToken, Ownable {
+    using SafeERC20 for IERC20;
+
+    // Hashes of LOWERCASED strings (stored normalized)
     bytes32 public immutable expectedSourceChainHash;
     bytes32 public immutable expectedSourceAddressHash;
+
     string  public constant EXPECTED_SYMBOL = "aUSDC";
 
     event Received(address indexed recipient, uint256 amount, string sourceChain);
@@ -46,33 +45,42 @@ contract USDCReceiver is AxelarExecutableWithToken, Ownable {       // [ADDED], 
         return keccak256(b);
     }
 
-    // Required by base but unused in our app (message-only path)
+    // Unused (message-only path)
     function _execute(
-        bytes32 /*commandId*/,
-        string calldata /*sourceChain*/,
-        string calldata /*sourceAddress*/,
-        bytes calldata  /*payload*/
+        bytes32,
+        string calldata,
+        string calldata,
+        bytes calldata
     ) internal pure override {
         revert("unsupported");
     }
 
-    // Token-bearing path (this is what Axelar calls for callContractWithToken)
+    // Token-bearing path (callContractWithToken)
     function _executeWithToken(
-    bytes32, string calldata sourceChain, string calldata sourceAddress, bytes calldata payload,
-    string calldata tokenSymbol, uint256 amount
+        bytes32,
+        string calldata sourceChain,
+        string calldata sourceAddress,
+        bytes calldata payload,
+        string calldata tokenSymbol,
+        uint256 amount
     ) internal override {
-        require(
-            keccak256(bytes(sourceChain))  == expectedSourceChainHash && 
-            keccak256(bytes(sourceAddress)) == expectedSourceAddressHash, 
-            "unauthorized source" 
-        ); 
-    require(keccak256(bytes(tokenSymbol)) == keccak256(bytes("aUSDC")), "wrong token");
+        // Normalize incoming strings, compare against stored hashes
+        require(_keccakLower(sourceChain)  == expectedSourceChainHash,  "bad sourceChain");
+        // keccak256(bytes(sourceAddress)) == expectedSourceAddressHash, ⛔ case-sensitive compare
+        require(_keccakLower(sourceAddress)== expectedSourceAddressHash, "unauthorized source");  // ✅ normalize case
+        // (Or normalize both chain & address with _keccakLower to be extra safe.)
 
-    address token = IAxelarGatewayCGP(address(gateway())).tokenAddresses(tokenSymbol);
-    address recipient = abi.decode(payload, (address));
+        // Asset guard 
+        require(keccak256(bytes(tokenSymbol)) == keccak256(bytes(EXPECTED_SYMBOL)), "wrong token");
 
-    IERC20(token).safeTransfer(recipient, amount); // ✅ CHANGED (SafeERC20)
-    emit Received(recipient, amount, sourceChain);
+        // Resolve token on this (dest) chain via Axelar gateway
+        address token = IAxelarGatewayCGP(address(gateway())).tokenAddresses(tokenSymbol);
+
+        // Decode recipient and forward funds (mint happens within this call)
+        address recipient = abi.decode(payload, (address));
+        IERC20(token).safeTransfer(recipient, amount);
+
+        emit Received(recipient, amount, sourceChain);
     }
 
     // ✅ ADDED: ops safety

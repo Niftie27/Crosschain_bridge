@@ -6,6 +6,7 @@ async function main() {
   const aUSDCAddr    = process.env.SEPOLIA_AUSDC;         // aUSDC on Sepolia
   const destContract = process.env.FUJI_RECEIVER_ADDR;    // USDCReceiver on Fuji (as "0x..." string)
   const recipient    = process.env.RECIPIENT || (await ethers.getSigners())[0].address;
+  const DEST_CHAIN   = "Avalanche";                          // Axelar chain name for Fuji (testnet)
 
   const amount  = ethers.utils.parseUnits(process.env.AMOUNT_USDC || "10", 6);   // aUSDC (6 dp)
   const gasEth  = ethers.utils.parseEther(process.env.GAS_ETH || "0.01");        // native gas prepay
@@ -24,18 +25,21 @@ async function main() {
 
   // ===== PRE-FLIGHT GUARDS (optional but recommended) =====
   // ✅ START PRE-FLIGHT
+  // 0) Required env sanity
   if (!process.env.FUJI_RPC_URL) throw new Error("Missing FUJI_RPC_URL in .env");      // ✅
   if (!ethers.utils.isAddress(senderAddr))   throw new Error("SEPOLIA_SENDER_ADDR invalid."); // ✅
   if (!ethers.utils.isAddress(aUSDCAddr))    throw new Error("SEPOLIA_AUSDC invalid.");      // ✅
   if (!ethers.utils.isAddress(destContract)) throw new Error("FUJI_RECEIVER_ADDR invalid."); // ✅
   if (!ethers.utils.isAddress(recipient))    throw new Error("RECIPIENT invalid.");         // ✅
 
+  // 1) You have enough aUSDC on Sepolia
   const me = (await ethers.getSigners())[0].address;
   const bal = await usdc.balanceOf(me);
   if (bal.lt(amount)) {
     throw new Error(`Insufficient aUSDC: have ${ethers.utils.formatUnits(bal, 6)}, need ${ethers.utils.formatUnits(amount, 6)}`); // ✅
   }
 
+  // 2) On Fuji, the dest is a CONTRACT
   const fuji = new ethers.providers.JsonRpcProvider(process.env.FUJI_RPC_URL);
   const code = await fuji.getCode(destContract);
   if (code === "0x") throw new Error("FUJI_RECEIVER_ADDR is not a deployed contract on Fuji."); // ✅
@@ -51,8 +55,9 @@ async function main() {
     const [hChain, hSender] = await Promise.all([                                                 // ✅
       rx.expectedSourceChainHash(), rx.expectedSourceAddressHash()                                // ✅
     ]);                                                                                           // ✅
-    const wantChain  = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("Ethereum Sepolia"));      // ✅
+    const wantChain = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("ethereum-sepolia"));
     const wantSender = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(senderAddr.toLowerCase())); // ✅
+
     if (hChain !== wantChain || hSender !== wantSender) {                                         // ✅
       throw new Error("Receiver mismatch: redeploy with SRC_CHAIN='Ethereum Sepolia' and SRC_ADDR=lowercased sender."); // ✅
     }                                                                                             // ✅
@@ -65,8 +70,32 @@ async function main() {
 
 
   // 1) approve USDCSender to pull your aUSDC
-  console.log("Approving aUSDC...");
-  await (await usdc.approve(sender.address, amount)).wait();
+  console.log("Approving aUSDC (if needed)...");
+const owner = (await ethers.getSigners())[0].address;
+const need  = amount;
+const have  = await usdc.allowance(owner, sender.address);
+
+if (have.gte(need)) {
+  console.log("Allowance sufficient, skipping approve.");
+} else {
+  const fee  = await ethers.provider.getFeeData();
+  const bump = x => x ? x.mul(2) : undefined;
+  const ov   = { maxFeePerGas: bump(fee.maxFeePerGas), maxPriorityFeePerGas: bump(fee.maxPriorityFeePerGas) };
+
+  try {
+    const tx1 = await usdc.approve(sender.address, need, ov);
+    console.log("approve tx:", tx1.hash);
+    await ethers.provider.waitForTransaction(tx1.hash, 1, 600000); // 10 min
+  } catch {
+    const tx0 = await usdc.approve(sender.address, 0, ov);
+    console.log("approve(0) tx:", tx0.hash);
+    await ethers.provider.waitForTransaction(tx0.hash, 1, 600000);
+
+    const tx2 = await usdc.approve(sender.address, need, ov);
+    console.log("approve->amount tx:", tx2.hash);
+    await ethers.provider.waitForTransaction(tx2.hash, 1, 600000);
+  }
+}
 
   // 2) bridge: Sepolia -> Fuji ("Avalanche" is the Axelar chain name for Fuji)
   console.log("Bridging...");

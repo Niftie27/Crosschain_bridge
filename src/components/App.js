@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useDispatch } from 'react-redux'
 import { Container } from 'react-bootstrap'
 import { ethers } from 'ethers'
@@ -11,7 +11,9 @@ import TransferCard from './TransferCard';
 import {
   loadProvider,
   loadNetwork,
-  loadAccount
+  loadAccount,
+  loadContracts,  // ✅ (your AMM: loadTokens)
+  loadBridge      // ✅ (your AMM: loadAMM)
 } from '../store/interactions'
 
 function App() {
@@ -30,12 +32,14 @@ function App() {
       window.location.reload()
     })
 
-    // Fetch current account from Metamask when changed
+    // Fetch accounts
     window.ethereum.on('accountsChanged', async () => {
       await loadAccount(dispatch)
     })
 
     // Initiate contracts
+    await loadContracts(provider, chainId, dispatch) // ✅ (was loadTokens)
+    await loadBridge(provider, chainId, dispatch)    // ✅ (was loadAMM)
     // await loadTokens(provider, chainId, dispatch)
     // setIsLoading(false)
   }

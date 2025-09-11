@@ -1,7 +1,16 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react' 
+import { useDispatch, useSelector } from 'react-redux'
 import { Card, Button, Dropdown } from 'react-bootstrap';
 import { Gear } from "react-bootstrap-icons";
 import './TransferCard.css';
+
+import {
+  loadAccount,        // ✅ keep connect here
+  loadBalances,       // ✅ minimal read from UI
+  bridge as bridgeAction
+} from '../store/interactions'
+
+import config from '../config.json'     
 
 const CHAIN_META = {
   "Ethereum Sepolia": {
@@ -24,19 +33,38 @@ const TOKEN_META = {
 };
 
 const TransferCard = () => {
-  const [fromAmount, setFromAmount] = React.useState('0.0');
-  const [toAmount, setToAmount] = React.useState('0.0');
 
-  // ✅ initialize to the only allowed token
-  const [fromToken, setFromToken] = React.useState('axlUSDC');
-  const [toToken, setToToken] = React.useState('axlUSDC');
+  const dispatch  = useDispatch()
 
-  const [fromChain, setFromChain] = React.useState('Avalanche Fuji');
-  const [toChain, setToChain] = React.useState('Ethereum Sepolia');
+  // -------- Global (Redux) --------
+  const provider = useSelector((state) => state.provider.connection)
+  const account  = useSelector((state) => state.provider.account)
+  const tokens   = useSelector((state) => state.tokens.contracts)     // ✅ MOVED ABOVE any usage
+  const balances = useSelector((state) => state.tokens.balances)
+  const [sender, receiver] =
+    useSelector((state) => state.bridge.contracts) || [null, null]
+  const isBridging = useSelector((state) => state.bridge.bridging.isBridging)
 
-  // (not required anymore, but harmless if you keep it)
-  const [openMenu, setOpenMenu] = React.useState(null);
+  // -------- Local UI state --------
+  const [fromAmount, setFromAmount] = useState('0.0')  // ✅ CHANGED: string (not number)
+  const [toAmount,   setToAmount]   = useState('0.0')  // ✅ CHANGED: string
+  const [fromToken,  setFromToken]  = useState('axlUSDC')
+  const [toToken,    setToToken]    = useState('axlUSDC')
 
+  // ✅ Default route: Sepolia → Fuji
+  const [fromChain, setFromChain] = useState('Ethereum Sepolia')
+  const [toChain,   setToChain]   = useState('Avalanche Fuji')
+
+  const [openMenu, setOpenMenu] = useState(null) // (unused; fine to keep or remove)
+
+  // ✅ locals used in onBridge (simple + readable)
+  const defaultGasEth   = config.bridge?.defaultGasEth || '0.03'
+  const receiverAddress = config['43113']?.receiverFuji || ''
+  const ausdcSepolia    = tokens?.[0] || null                    // ✅ NOW SAFE: tokens is already defined
+  const isSupportedRoute =
+    fromChain === 'Ethereum Sepolia' && toChain === 'Avalanche Fuji'
+
+  // (optional UX) swap button
   const handleSwapTokens = () => {
     setFromToken(toToken);
     setToToken(fromToken);
@@ -47,7 +75,56 @@ const TransferCard = () => {
     setOpenMenu(null);
   };
 
-  // ===== Chain dropdown (your version, with tiny aria fix) =====
+  // ❌ Removed loading contracts here (App already did it)
+  // ✅ Keep a minimal effect to refresh balances when account or token contracts present
+  // -------- Refresh balances when ready --------
+  useEffect(() => {
+    (async () => {
+      if (provider && tokens?.[0] && tokens?.[1] && account) {
+        await loadBalances(tokens, account, dispatch)              // ✅
+      }
+    })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [account, tokens, provider])
+
+  const onConnect = async () => {                                     // ✅
+    await loadAccount(dispatch)
+  }
+
+  const onBridge = async () => {                                      // ✅
+    if (!provider || !account || !sender || !ausdcSepolia) return
+    if (!isSupportedRoute || !receiverAddress) return
+
+    const amt = (fromAmount || '0').trim()
+    if (Number(amt) <= 0) return
+
+    await bridgeAction(
+      provider,       // ethers.Web3Provider
+      account,        // wallet
+      sender,         // USDCSender
+      ausdcSepolia,   // aUSDC (Sepolia)
+      amt,            // amount
+      defaultGasEth,  // axelar prepay (simple default)
+      account,        // recipient = wallet
+      receiverAddress,// USDCReceiver on Fuji
+      dispatch        // dispatch last (AMM style)
+    )
+
+    setToAmount(amt) // simple 1:1 reflection
+    // Optionally re-read balances after bridging:
+    // await loadBalances(tokensArr, account, dispatch)
+  }
+
+  // ✅ button state/label (clean)
+  const ctaLabel = !account
+    ? 'Connect Wallet'
+    : isBridging
+      ? 'Bridging...'
+      : 'Bridge'
+
+  const ctaDisabled = !account || isBridging
+
+  // ===== Chain dropdown (Chain & Token dropdowns kept as in your file) =====
   const ChainSelect = ({ value, onChange, ariaLabel }) => {
     const meta = CHAIN_META[value];
 
@@ -190,6 +267,7 @@ const TransferCard = () => {
                 onChange={setFromChain}
                 ariaLabel="Select from chain"
               />
+              <div className="xy-help">{fromChain === 'Ethereum Sepolia' && balances?.[0] ? <small>Balance: {balances[0]} axlUSDC</small> : null}</div> {/* ✅ */}
             </div>
 
             <div className="xy-netcol">
@@ -199,6 +277,7 @@ const TransferCard = () => {
                 onChange={setToChain}
                 ariaLabel="Select to chain"
               />
+              <div className="xy-help">{toChain === 'Avalanche Fuji' && balances?.[1] ? <small>Balance: {balances[1]} axlUSDC</small> : null}</div>   {/* ✅ */}
             </div>
           </div>
 
@@ -263,7 +342,14 @@ const TransferCard = () => {
           </div>
 
           {/* CTA */}
-          <Button className="xy-cta">Connect Wallet</Button>
+          <Button
+            className="xy-cta"
+            disabled={ctaDisabled}
+            onClick={!account ? onConnect : onBridge}                // ✅ connect or bridge
+            title={!isSupportedRoute ? 'Only Sepolia → Fuji supported right now' : undefined}
+          >
+            {ctaLabel}
+          </Button>
         </Card.Body>
       </Card>
     </div>

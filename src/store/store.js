@@ -1,13 +1,17 @@
 import { configureStore } from '@reduxjs/toolkit'
 
 import provider from './reducers/provider'
+import tokens from './reducers/tokens'
+import bridge from './reducers/bridge'
 
 export const store = configureStore({
   reducer: {
-    provider
+    provider,
+    tokens,
+    bridge
   },
-  middleware: getDefaultMiddleware =>
+  middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
-      serializableCheck: false
+      serializableCheck: false // ok for ethers objects
     })
 })

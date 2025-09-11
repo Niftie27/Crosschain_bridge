@@ -3,7 +3,7 @@ require("dotenv").config({ override: true }); // make sure .env wins
 
 async function main() {
   const GATEWAY_FUJI = process.env.FUJI_GATEWAY;
-  const SRC_CHAIN    = "Ethereum Sepolia"; // <- space, not hyphen
+  const SRC_CHAIN    = "ethereum-sepolia"; // <- space, not hyphen
   const SRC_ADDR     = process.env.SEPOLIA_SENDER_ADDR.toLowerCase(); // <- checksum, no toLowerCase
 
   console.log("Deploying USDCReceiver with:", { GATEWAY_FUJI, SRC_CHAIN, SRC_ADDR });
