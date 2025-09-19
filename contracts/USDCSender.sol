@@ -48,7 +48,7 @@ contract USDCSender {
         require(bytes(destChain).length != 0, "destChain required");
         require(bytes(destContract).length != 0, "destContract required");
         require(amount > 0, "amount=0");
-        require(msg.value > 0, "msg.value (gas) required");
+        require(msg.value > 0, "msg.value (gas) required"); //  ✅ keeps native prepay behavior
 
         // 1) Safe pull user's aUSDC into this contract, additional
         // require(aUSDC.transferFrom(msg.sender, address(this), amount), "pull failed"); ✅
@@ -63,7 +63,7 @@ contract USDCSender {
         bytes memory payload = abi.encode(recipient);
 
         // 4) Prepay destination execution gas (refunds go to msg.sender)
-        gasService.payNativeGasForContractCallWithToken{value: msg.value}(
+        gasService.payNativeGasForContractCallWithToken{value: msg.value}(  // ✅ native path
             address(this),
             destChain,
             destContract,
@@ -81,6 +81,47 @@ contract USDCSender {
             TOKEN_SYMBOL,
             amount
         );
+
+        emit Bridging(msg.sender, recipient, amount, destChain, destContract);
+    }
+
+    /// ERC-20-gas prepay path (optional future test w/ aUSDC) — no msg.value needed
+    function bridgeWithERC20Gas(
+        string calldata destChain,
+        string calldata destContract,
+        address recipient,
+        uint256 amount,
+        uint256 gasFeeInAUSDC,     // ✅ prepay Axelar/destination gas in aUSDC
+        address refundAddress
+    ) external {
+        require(bytes(destChain).length != 0, "destChain required");
+        require(bytes(destContract).length != 0, "destContract required");
+        require(amount > 0, "amount=0");
+        require(gasFeeInAUSDC > 0, "gasFeeInAUSDC=0"); // ✅ ERC-20 gas path
+
+        // Pull both bridge amount + gas prepay from user
+        aUSDC.safeTransferFrom(msg.sender, address(this), amount + gasFeeInAUSDC);
+
+        // Approvals
+        aUSDC.forceApprove(address(gasService), gasFeeInAUSDC); // ✅ allow gas service to take aUSDC as gas
+        aUSDC.forceApprove(address(gateway), amount);
+
+        bytes memory payload = abi.encode(recipient);
+
+        // ✅ ERC-20 gas prepay; works only if gas service accepts aUSDC on this chain
+        gasService.payGasForContractCallWithToken(
+            address(this),
+            destChain,
+            destContract,
+            payload,
+            TOKEN_SYMBOL,
+            amount,
+            address(aUSDC),   // gas token
+            gasFeeInAUSDC,
+            refundAddress
+        );
+
+        gateway.callContractWithToken(destChain, destContract, payload, TOKEN_SYMBOL, amount);
 
         emit Bridging(msg.sender, recipient, amount, destChain, destContract);
     }

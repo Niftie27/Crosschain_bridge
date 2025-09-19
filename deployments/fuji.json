@@ -1,0 +1,7 @@
+{
+  "network": "fuji",
+  "gateway": "0xC249632c2D40b9001FE907806902f63038B737Ab",
+  "receiver": "0x00B5c1F75155f16Cb96AE9f129EdBB645aDC20E5",
+  "trustedSender": "0xde0987d783119f7c8744620bcb1a563a2a514311",
+  "trustedSourceChain": "Ethereum-Sepolia"
+}

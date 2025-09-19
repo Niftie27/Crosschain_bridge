@@ -15,8 +15,8 @@ contract USDCReceiver is AxelarExecutableWithToken, Ownable {
     using SafeERC20 for IERC20;
 
     // Hashes of LOWERCASED strings (stored normalized)
-    bytes32 public immutable expectedSourceChainHash;
-    bytes32 public immutable expectedSourceAddressHash;
+    bytes32 public immutable expectedSourceChainHash;   // stored lowercased hash
+    bytes32 public immutable expectedSourceAddressHash; // stored lowercased hash
 
     string  public constant EXPECTED_SYMBOL = "aUSDC";
 
@@ -26,11 +26,11 @@ contract USDCReceiver is AxelarExecutableWithToken, Ownable {
         AxelarExecutableWithToken(gateway_)
         Ownable(msg.sender)
     {
-        // NOTE: pass srcChain = "Ethereum Sepolia"
-        expectedSourceChainHash   = keccak256(bytes(srcChain));
+        // NOTE: pass srcChain = "ethereum-sepolia"
+        expectedSourceChainHash   = _keccakLower(srcChain);
         // NOTE: store srcAddress = LOWERCASED sender string
         // store the LOWERCASED address hash
-        expectedSourceAddressHash = keccak256(bytes(srcAddress)); // you already handle lowercasing at deploy-time
+        expectedSourceAddressHash = _keccakLower(srcAddress); // you already handle lowercasing at deploy-time
     }
 
     // --- helper: keccak of lowercase(s) ---  <-- added
@@ -76,7 +76,10 @@ contract USDCReceiver is AxelarExecutableWithToken, Ownable {
         // Resolve token on this (dest) chain via Axelar gateway
         address token = IAxelarGatewayCGP(address(gateway())).tokenAddresses(tokenSymbol);
 
+        require(token != address(0), "token not mapped"); // <— insert here
+
         // Decode recipient and forward funds (mint happens within this call)
+        // forward
         address recipient = abi.decode(payload, (address));
         IERC20(token).safeTransfer(recipient, amount);
 

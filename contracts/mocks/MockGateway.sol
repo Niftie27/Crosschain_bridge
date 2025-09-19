@@ -28,7 +28,7 @@ contract MockGateway {
     CallWithToken public lastCall;
 
     // 1) map token symbol to token address on the destination chain
-    function setTokenAddress(string calldata symbol, address token) external {
+    function setTokenAddress(string calldata symbol, address token) external { // ✅ ADDED
         tokenAddresses[symbol] = token;
     }
 
@@ -42,14 +42,15 @@ contract MockGateway {
     ) external {
         lastCall = CallWithToken(destChain, destAddr, payload, symbol, amount); 
         // records last call USDCSender made to callContractWithToken(...).
-        // In prod: Axelar relays later. In tests: trigger delivery via mockExecuteWithToken.
+        // In prod: Axelar relays later.
+        // In local tests: trigger delivery via mockExecuteWithToken.
         // In real life: Axelar would validate and later deliver to the destination chain.
         // In the mock: we only record the arguments so your test can check them.
     }
 
     // [ADDED] AxelarExecutableWithToken expects this to exist on the gateway, additional
     // Axelar GMP base calls this on the gateway during executeWithToken(...)
-    function validateContractCallAndMint( // ✅ ADDED (stub expected by Axelar base)
+    function validateContractCallAndMint( // ✅ stub expected by AxelarExecutableWithToken (receiver will call this on the gateway)
         bytes32 /*commandId*/,
         string calldata /*sourceChain*/,
         string calldata /*sourceAddress*/,

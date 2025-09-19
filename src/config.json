@@ -1,15 +1,15 @@
 {
   "11155111": {
-    "name": "Ethereum Sepolia",
+    "name": "Ethereum-Sepolia",
     "ausdcSepolia": "0x254d06f33bDc5b8ee05b2ea472107E300226659A",
-    "senderSepolia": "0x71e03D8897C3575013271f132852c48ABCb5D640",
+    "senderSepolia": "0xDe0987d783119F7C8744620Bcb1A563A2a514311",
     "recipient": "0xa44ea91e34695c4725DFFFa26a4FC965Bd604246" 
   },
   "43113": {
     "name": "Avalanche Fuji",
     "fujiRpcUrl": "https://api.avax-test.network/ext/bc/C/rpc",
     "ausdcFuji": "0x57F1c63497AEe0bE305B8852b354CEc793da43bB",
-    "receiverFuji": "0x601bB668Cc756701d8D3Ac7Ef01dfEdeD0695Be5"
+    "receiverFuji": "0x00B5c1F75155f16Cb96AE9f129EdBB645aDC20E5"
   },
   "bridge": {
     "destChain": "Avalanche",
