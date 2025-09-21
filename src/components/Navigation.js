@@ -3,15 +3,12 @@ import Navbar from 'react-bootstrap/Navbar';
 import Button from 'react-bootstrap/Button'
 import Form from 'react-bootstrap/Form'
 import Blockies from 'react-blockies'
-import ThemeSwitcher from './ThemeSwitcher'   // + add
+import ThemeSwitcher from './ThemeSwitcher'
 import './Navigation.css';
-
 
 import logo from '../logo.png';
 
 import { loadAccount } from '../store/interactions'
-
-import config from '../config.json'
 
 const Navigation = () => {
   const chainId = useSelector(state => state.provider.chainId)
@@ -19,37 +16,56 @@ const Navigation = () => {
 
   const dispatch = useDispatch()
 
-  const connectHandler = async () => {
-    const account = await loadAccount(dispatch)
-  }
+  const connectHandler = async () => {                                   // 🔵
+    try {                                                                 // 🔵
+      await loadAccount(dispatch)                                         // 🔵
+    } catch (e) {                                                         // 🔵
+      alert(e.message || 'MetaMask not detected. Please install or enable it.') // 🔵
+    }                                                                     // 🔵
+  }                                                                       // 🔵
 
   const networkHandler = async (e) => {
-    await window.ethereum.request({
-      method: 'wallet_switchEthereumChain',
-      params: [{ chainId: e.target.value }],
-    })
+    const chainHex = e.target.value
+    try {
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: chainHex }],
+      })
+    } catch (err) {
+      if (err?.code === 4902 && chainHex.toLowerCase() === '0xaa36a7') {
+        await window.ethereum.request({
+          method: 'wallet_addEthereumChain',
+          params: [{
+            chainId: '0xaa36a7',
+            chainName: 'Sepolia',
+            nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+            rpcUrls: ['https://rpc.sepolia.org'],
+            blockExplorerUrls: ['https://sepolia.etherscan.io'],
+          }],
+        });
+      } else {
+        console.error(err)
+      }
+    }
   }
 
   const theme =
     localStorage.getItem('theme') ||
     (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-  
-  const borderColor = theme === 'dark' ? 'rgba(255,255,255,.08)' : 'rgba(220, 220, 220, 0.1)';
 
-return (
-  <Navbar
-    expand="lg"
-    sticky="top"
-    className="py-2"
-    style={{
-      position: 'sticky',
-      top: 0,
-      zIndex: 2000,                          // ensure it’s above content
-      background: 'var(--bs-body-bg)',       // solid bg so content can’t intercept clicks
-      borderBottom: '1px solid var(--nav-divider)'
-    }}
-  >
-
+  return (
+    <Navbar
+      expand="lg"
+      sticky="top"
+      className="py-2"
+      style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 2000,
+        background: 'var(--bs-body-bg)',
+        borderBottom: '1px solid var(--nav-divider)'
+      }}
+    >
       <div className="w-100 d-flex align-items-center">
         {/* left: logo + brand */}
         <div className="d-flex align-items-center">
@@ -61,26 +77,26 @@ return (
         <div className="d-flex align-items-center ms-auto gap-2">
           <Form.Select
             aria-label="Network Selector"
-            value={config[chainId] ? `0x${chainId.toString(16)}` : `0`}
+            value={chainId ? `0x${chainId.toString(16)}` : '0'}
             onChange={networkHandler}
             style={{ width: 170 }}
           >
             <option value="0" disabled>Select Network</option>
-            <option value="0x7A69">Localhost</option>
-            <option value="0x5">Sepolia</option>
+            <option value="0x7a69">Localhost</option> {/* 31337 */}
+            <option value="0xaa36a7">Sepolia</option> {/* 11155111 */}
           </Form.Select>
 
           {account ? (
             <div className="d-flex align-items-center">
               <span className="me-2">{account.slice(0,5) + '...' + account.slice(38,42)}</span>
               <Blockies seed={account} size={10} scale={3}
-              color="#2187D0" bgColor="#F1F2F9" spotColor="#767F92" />
+                color="#2187D0" bgColor="#F1F2F9" spotColor="#767F92" />
             </div>
           ) : (
             <Button onClick={connectHandler} className="btn-connect">Connect</Button>
           )}
 
-          <ThemeSwitcher /> {/* ← sits on the same row */}
+          <ThemeSwitcher />
         </div>
       </div>
     </Navbar>

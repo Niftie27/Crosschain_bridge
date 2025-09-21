@@ -3,7 +3,7 @@
     "name": "Ethereum-Sepolia",
     "ausdcSepolia": "0x254d06f33bDc5b8ee05b2ea472107E300226659A",
     "senderSepolia": "0xDe0987d783119F7C8744620Bcb1A563A2a514311",
-    "recipient": "0xa44ea91e34695c4725DFFFa26a4FC965Bd604246" 
+    "recipient": "0xa44ea91e34695c4725DFFFa26a4FC965Bd604246"
   },
   "43113": {
     "name": "Avalanche Fuji",
@@ -14,6 +14,11 @@
   "bridge": {
     "destChain": "Avalanche",
     "defaultGasEth": "0.03"
-  }
+  },
+  "chains": {
+    "sepolia": 11155111,
+    "fuji": 43113
+  },
+  "tokenDecimals": 6
 }
 

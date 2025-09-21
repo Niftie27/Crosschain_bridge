@@ -7,7 +7,8 @@ export const bridge = createSlice({
     bridging: {
       isBridging: false,
       isSuccess: false,
-      transactionHash: null
+      transactionHash: null,
+      error: null
     }
   },
   reducers: {
@@ -18,16 +19,19 @@ export const bridge = createSlice({
       state.bridging.isBridging = true
       state.bridging.isSuccess = false
       state.bridging.transactionHash = null
+      state.bridging.error = null
     },
     bridgeSuccess: (state, action) => {
       state.bridging.isBridging = false
       state.bridging.isSuccess = true
       state.bridging.transactionHash = action.payload
+      state.bridging.error = null
     },
     bridgeFail: (state, action) => {
       state.bridging.isBridging = false
       state.bridging.isSuccess = false
       state.bridging.transactionHash = null
+      state.bridging.error = action.payload || { message: 'Unknown error' }
     }
   }
 })

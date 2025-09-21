@@ -28,9 +28,13 @@ import config from '../config.json';
 
 
 export const loadProvider = (dispatch) => {
-  const provider = new ethers.providers.Web3Provider(window.ethereum)
-  dispatch(setProvider(provider))
+  if (!window.ethereum) { // 🔵
+    dispatch(setProvider(null)) // 🔵
+    throw new Error('MetaMask not detected. Please install or enable it.') // 🔵
+  } // 🔵
 
+  const provider = new ethers.providers.Web3Provider(window.ethereum, 'any') // 🔵
+  dispatch(setProvider(provider))
   return provider
 }
 
@@ -42,6 +46,7 @@ export const loadNetwork = async (provider, dispatch) => {
 }
 
 export const loadAccount = async (dispatch) => {
+  if (!window.ethereum) throw new Error('MetaMask not detected.') // 🔵
   const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
   const account = ethers.utils.getAddress(accounts[0])
   dispatch(setAccount(account))
@@ -121,15 +126,16 @@ export const bridge = async (
   dispatch          // keep dispatch last (AMM pattern)
 ) => {
   try {
-    dispatch(bridgeRequest())
+    dispatch(bridgeRequest()) // 🔵
 
     let transaction
 
     const signer = provider.getSigner()
-    const destChain = "Avalanche"                       // Axelar name for Fuji
-    const gasDefault = config.bridge.defaultGasEth || '0.03'
-    const gasEth = String(inputGasEth ?? gasDefault)
-    const amount = ethers.utils.parseUnits(String(inputAmount), 6)
+    const destChain = (config.bridge?.destChain || 'Avalanche') // 🔵
+    const gasDefault = (config.bridge?.defaultGasEth || '0.03') // 🔵
+    const gasEth = String(inputGasEth ?? gasDefault)   // 🔵 allow UI override
+    const decimals = Number(config.tokenDecimals ?? 6) // 🔵 configurable decimals
+    const amount = ethers.utils.parseUnits(String(inputAmount), decimals) // 🔵
     const value = ethers.utils.parseEther(gasEth)
 
     // --- approve on TOKEN (spender = USDCSender) ---
@@ -147,11 +153,23 @@ export const bridge = async (
     // --- bridge call ---
     transaction = await sender.connect(signer).bridge(destChain, receiverAddress, recipient, amount, { value })
     await transaction.wait()
+    const receipt = await transaction.wait()
 
     dispatch(bridgeSuccess(transaction.hash))
+    return { hash: transaction.hash, receipt }
 
-  } catch (error) {
-    dispatch(bridgeFail())
+  } catch (err) {
+    const errPayload = { // 🔵
+      code: err?.code, // 🔵
+      message:
+        err?.reason ||
+        err?.data?.message ||
+        err?.error?.message ||
+        err?.message ||
+        'Bridge failed'
+    } // 🔵
+    dispatch(bridgeFail(errPayload)) // 🔵
+    throw err // 🔵
   }
 }
 

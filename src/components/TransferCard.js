@@ -32,6 +32,26 @@ const TOKEN_META = {
   },
 };
 
+/* ---------------- Input helpers (beginner-friendly) ---------------- */
+// Allow . → 0., preserve trailing dot for typing, max 6 decimals
+function normalizeAmountInput(s) {
+  let v = String(s ?? '')
+  // Remove illegal characters
+  v = v.replace(/[^0-9.]/g, '')
+  // If starts with '.', prefix 0
+  if (v.startsWith('.')) v = '0' + v
+  // Keep only first dot
+  const firstDot = v.indexOf('.')
+  if (firstDot !== -1) {
+    v = v.slice(0, firstDot + 1) + v.slice(firstDot + 1).replace(/\./g, '')
+  }
+  // Enforce 6 decimals, but allow trailing dot while typing
+  const [i, d = ''] = v.split('.')
+  if (d.length > 6) v = `${i}.${d.slice(0, 6)}`
+  // Disallow negative (we never allow '-')
+  return v
+}
+
 const TransferCard = () => {
 
   const dispatch  = useDispatch()
@@ -39,21 +59,27 @@ const TransferCard = () => {
   // -------- Global (Redux) --------
   const provider = useSelector((state) => state.provider.connection)
   const account  = useSelector((state) => state.provider.account)
+  const chainId  = useSelector((state) => state.provider.chainId) // 🔵
   const tokens   = useSelector((state) => state.tokens.contracts)     // ✅ MOVED ABOVE any usage
   const balances = useSelector((state) => state.tokens.balances)
   const [sender, receiver] =
     useSelector((state) => state.bridge.contracts) || [null, null]
-  const isBridging = useSelector((state) => state.bridge.bridging.isBridging)
+  const bridgeState = useSelector((state) => state.bridge.bridging.isBridging)
+
+  const isBridging = bridgeState.isBridging // 🔵
+  const txHash = bridgeState.transactionHash // 🔵
+  const bridgeError = bridgeState.error // 🔵
+
+  const IS_SEPOLIA = Number(config?.chains?.sepolia ?? 11155111) // 🔵 read from config, fallback kept
+  const isOnSepolia = chainId === IS_SEPOLIA // 🔵
 
   // -------- Local UI state --------
-  const [fromAmount, setFromAmount] = useState('0.0')  // ✅ CHANGED: string (not number)
-  const [toAmount,   setToAmount]   = useState('0.0')  // ✅ CHANGED: string
-  const [fromToken,  setFromToken]  = useState('axlUSDC')
-  const [toToken,    setToToken]    = useState('axlUSDC')
-
-  // ✅ Default route: Sepolia → Fuji
-  const [fromChain, setFromChain] = useState('Ethereum Sepolia')
-  const [toChain,   setToChain]   = useState('Avalanche Fuji')
+  const [fromAmount, setFromAmount] = useState('')  // ✅ CHANGED: string (not number)
+  const [toAmount,   setToAmount]   = useState('')  // ✅ CHANGED: string
+  const [fromToken,  setFromToken]  = useState(null)
+  const [toToken,    setToToken]    = useState(null)
+  const [fromChain,  setFromChain]  = useState(null)     // 🔵 start unselected
+  const [toChain,    setToChain]    = useState(null)         // 🔵 start unselected
 
   const [openMenu, setOpenMenu] = useState(null) // (unused; fine to keep or remove)
 
@@ -63,6 +89,11 @@ const TransferCard = () => {
   const ausdcSepolia    = tokens?.[0] || null                    // ✅ NOW SAFE: tokens is already defined
   const isSupportedRoute =
     fromChain === 'Ethereum Sepolia' && toChain === 'Avalanche Fuji'
+
+  // Validation
+  const balanceFrom = Number(balances?.[0] || 0) // 🔵
+  const amountNum   = Number(fromAmount || 0)    // 🔵
+  const amountValid = amountNum > 0 && amountNum <= balanceFrom // 🔵
 
   // (optional UX) swap button
   const handleSwapTokens = () => {
@@ -87,32 +118,46 @@ const TransferCard = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [account, tokens, provider])
 
-  const onConnect = async () => {                                     // ✅
-    await loadAccount(dispatch)
+  const onConnect = async () => {                                        // 🔵
+    try {                                                                // 🔵
+      await loadAccount(dispatch)                                        // 🔵
+    } catch (e) {                                                        // 🔵
+      alert(e.message || 'MetaMask not detected. Please install or enable it.') // 🔵
+    }                                                                    // 🔵
   }
 
-  const onBridge = async () => {                                      // ✅
-    if (!provider || !account || !sender || !ausdcSepolia) return
+  const onBridge = async () => { // 🔵
+    if (!account) { await onConnect(); return } // 🔵 early connect guard
+
+    if (!provider || !sender || !ausdcSepolia) return
     if (!isSupportedRoute || !receiverAddress) return
+    if (!amountValid) return
+    if (!isOnSepolia) return // 🔵
 
-    const amt = (fromAmount || '0').trim()
-    if (Number(amt) <= 0) return
+    const amt = normalizeAmountInput(fromAmount || '0') // 🔵
 
-    await bridgeAction(
-      provider,       // ethers.Web3Provider
-      account,        // wallet
-      sender,         // USDCSender
-      ausdcSepolia,   // aUSDC (Sepolia)
-      amt,            // amount
-      defaultGasEth,  // axelar prepay (simple default)
-      account,        // recipient = wallet
-      receiverAddress,// USDCReceiver on Fuji
-      dispatch        // dispatch last (AMM style)
-    )
+    try {
+      const { hash } = await bridgeAction(
+        provider,       // ethers.Web3Provider
+        account,        // wallet
+        sender,         // USDCSender
+        ausdcSepolia,   // aUSDC (Sepolia)
+        amt,            // amount
+        defaultGasEth,  // axelar prepay (simple default)
+        account,        // recipient = wallet
+        receiverAddress,// USDCReceiver on Fuji
+        dispatch        // dispatch last (AMM style)
+      )
 
-    setToAmount(amt) // simple 1:1 reflection
-    // Optionally re-read balances after bridging:
-    // await loadBalances(tokensArr, account, dispatch)
+      setToAmount(amt) // simple 1:1 reflection
+      // Optionally re-read balances after bridging:
+      // await loadBalances(tokensArr, account, dispatch)
+
+      // refresh balances on both chains
+      await loadBalances(tokens, account, dispatch)
+    } catch (err) {
+      // no-op; error UI handled via Redux state // 🔵
+    }
   }
 
   // ✅ button state/label (clean)
@@ -122,11 +167,12 @@ const TransferCard = () => {
       ? 'Bridging...'
       : 'Bridge'
 
-  const ctaDisabled = !account || isBridging
+  // Note: when !account, we hide the bridge UI and show a dedicated Connect button.
+  const ctaDisabled = isBridging || !isSupportedRoute || !isOnSepolia // 🔵
 
   // ===== Chain dropdown (Chain & Token dropdowns kept as in your file) =====
   const ChainSelect = ({ value, onChange, ariaLabel }) => {
-    const meta = CHAIN_META[value];
+    const meta = value ? CHAIN_META[value] : null
 
     const Toggle = React.forwardRef(({ onClick, ...props }, ref) => (
       <button
@@ -139,8 +185,8 @@ const TransferCard = () => {
       >
         <div className="xy-token-meta">
           <div className="xy-token-logo">
-            {meta?.logo ? (
-              <img alt={value} src={meta.logo} />
+            {value && meta?.logo ? (                         /* 🔵 only when selected */
+            <img alt={value} src={meta.logo} />            /* 🔵 */
             ) : (
               <svg viewBox="0 0 24 24" width="28" height="28">
                 <circle cx="12" cy="12" r="10" className="xy-softdisk"/>
@@ -148,8 +194,10 @@ const TransferCard = () => {
             )}
           </div>
           <div className="xy-token-text">
-            <span className="xy-token-symbol">{value}</span>
-            <span className="xy-token-name">Testnet</span>
+            <span className="xy-token-symbol">
+              {value || 'Select chain'} {/* 🔵 placeholder */}
+            </span>
+            <span className="xy-token-name">{value ? 'Testnet' : ''}</span> {/* 🔵 */}
           </div>
         </div>
 
@@ -206,11 +254,18 @@ const TransferCard = () => {
       >
         <div className="xy-token-meta">
           <div className="xy-token-logo">
-            <img alt={meta.symbol} src={meta.logo} />
+            {/* render logo only when an actual selection exists */}
+          {value ? (                                      /* 🔵 */
+            <img alt={meta.symbol} src={meta.logo} />     /* 🔵 */
+          ) : null}                                       
           </div>
           <div className="xy-token-text">
-            <span className="xy-token-symbol">{meta.symbol}</span>
-            <span className="xy-token-name">{meta.name}</span>
+            <span className="xy-token-symbol">
+              {value ? meta.symbol : 'Select token'}         {/* 🔵 placeholder */}
+            </span>
+            <span className="xy-token-name">
+              {value ? meta.name : ''}                       {/* 🔵 empty when no selection */}
+            </span>
           </div>
         </div>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -248,6 +303,15 @@ const TransferCard = () => {
     <div className="transfer-container">
       <Card className="xy-card">
         <Card.Body className="xy-body">
+
+        {/* Show only connect button if wallet not connected */} {/* 🔵 */}
+        {!account ? ( // 🔵
+          <div className="d-flex flex-column align-items-center justify-content-center" style={{ minHeight: 240 }}> {/* 🔵 */}
+            <p className="mb-3">Connect your wallet to start bridging</p> {/* 🔵 */}
+            <Button className="xy-cta" onClick={onConnect}>Connect Wallet</Button> {/* 🔵 */}
+          </div> // 🔵
+        ) : ( // 🔵
+          <>
           {/* Header */}
           <div className="xy-header">
             <h3 className="xy-title">Transfer</h3>
@@ -289,7 +353,12 @@ const TransferCard = () => {
                 className="xy-amount"
                 placeholder="0.0"
                 value={fromAmount}
-                onChange={(e) => setFromAmount(e.target.value)}
+                onChange={(e) => { // 🔵
+                  const v = normalizeAmountInput(e.target.value) 
+                  // 🔵 normalizeAmountInput not allowing negative numbers
+                  setFromAmount(v) // 🔵
+                  setToAmount(v) // 🔵
+                }} // 🔵
                 inputMode="decimal"
               />
               <span className="xy-sub">≈ $ 0</span>
@@ -313,7 +382,7 @@ const TransferCard = () => {
             </button>
           </div>
 
-          {/* TO (identical to FROM) */}
+          {/* TO */}
           <div className="xy-row">
             <div className="xy-left">
               <span className="xy-label">To</span>
@@ -321,8 +390,10 @@ const TransferCard = () => {
                 className="xy-amount"
                 placeholder="0.0"
                 value={toAmount}
-                onChange={(e) => setToAmount(e.target.value)}
+                readOnly                  // 🔵 
                 inputMode="decimal"
+                onFocus={(e) => e.target.blur()}          // 🔵 prevent cursor
+                tabIndex={-1}                             // 🔵 skip in tab order
               />
               <span className="xy-sub">≈ $ 0</span>
             </div>
@@ -335,21 +406,57 @@ const TransferCard = () => {
             />
           </div>
 
-          {/* Exchange rate */}
-          <div className="xy-meta">
-            <span>Exchange Rate</span>
-            <span>-</span>
-          </div>
+            {/* Exchange rate */}
+            <div className="xy-meta">
+              <span>Exchange Rate</span>
+              <span>-</span>
+            </div>
 
-          {/* CTA */}
-          <Button
-            className="xy-cta"
-            disabled={ctaDisabled}
-            onClick={!account ? onConnect : onBridge}                // ✅ connect or bridge
-            title={!isSupportedRoute ? 'Only Sepolia → Fuji supported right now' : undefined}
-          >
-            {ctaLabel}
-          </Button>
+            {/* Validation messages */}
+            {!amountValid && (
+              <div className="xy-error"><small>Enter a valid amount ≤ balance.</small></div>
+            )}
+            {!isSupportedRoute && (
+              <div className="xy-error"><small>Only Sepolia → Fuji supported right now.</small></div>
+            )}
+            {!isOnSepolia && (
+              <div className="xy-error"><small>Wrong network. Please switch MetaMask to Sepolia.</small></div>
+            )}
+
+            {/* Connect/Bridge button */}
+            <Button
+              className="xy-cta"
+              disabled={ctaDisabled}
+              onClick={!account ? onConnect : onBridge}   // ✅ connect or bridge
+              title={!isSupportedRoute ? 'Only Sepolia → Fuji supported right now' : undefined}
+            >
+              {ctaLabel}
+            </Button>
+
+            {/* Status */} {/* 🔵 */}
+            {txHash && (
+              <div className="xy-help mt-2">
+                <small>
+                  Tx:&nbsp;
+                  <a
+                    href={`https://sepolia.etherscan.io/tx/${txHash}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {txHash.slice(0, 10)}...{txHash.slice(-8)}
+                  </a>
+                </small>
+              </div>
+            )}
+            {bridgeError && (
+              <div className="xy-error mt-2">
+                <small>{bridgeError.message || 'Transaction failed'}</small>
+              </div>
+            )}
+          </>
+        )}
+
+
         </Card.Body>
       </Card>
     </div>
