@@ -434,3 +434,40 @@ button.xy-iconbtn svg{
 }
 .connect-wallet-btn:hover { filter: brightness(1.06); }
 .connect-wallet-btn:focus-visible { outline:2px solid var(--ring); outline-offset:2px; }
+
+/* Token dropdown fixed to selected size in both states */
+.xy-row { align-items: center; }
+.xy-row > .dropdown {
+  flex: 0 0 172.26px;
+  width: 172.26px;
+}
+.xy-row > .dropdown > .xy-token {
+  width: 100%;
+  height: 53.73px;
+  min-height: 53.73px;
+  padding: 8px 10px;
+  box-sizing: border-box;
+}
+
+/* Layout so text gets space and right-side chevron stays put */
+.xy-token { display: flex; align-items: center; justify-content: space-between; }
+.xy-token .xy-token-meta { flex: 1 1 auto; min-width: 0; }
+.xy-token > svg { flex: 0 0 auto; margin-left: 8px; }
+.xy-token .xy-token-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Only when no token selected: make placeholder fit within the smaller width */
+.xy-token.xy-token--empty .xy-token-symbol {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.1px;
+}
+
+
+/* --- Make disabled CTA visibly disabled (gradient looked "enabled") --- */ 
+.xy-cta:disabled {                                 /* bridge btn when disabled */ 
+  opacity: .6; 
+  filter: grayscale(.25); 
+  cursor: not-allowed; 
+} 
+
+

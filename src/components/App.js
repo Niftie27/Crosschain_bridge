@@ -4,6 +4,8 @@ import { Container } from 'react-bootstrap'
 import { ethers } from 'ethers'
 
 // Components
+import { setTokenContracts, setSymbols, balancesLoaded } from '../store/reducers/tokens'   // 🟡
+import { setBridgeContracts } from '../store/reducers/bridge'                               // 🟡
 import Navigation from './Navigation';
 import Loading from './Loading';
 import TransferCard from './TransferCard';
@@ -27,6 +29,12 @@ function App() {
     if (chainId === SUPPORTED) {
       await loadContracts(provider, chainId, dispatch) // 🔵
       await loadBridge(provider, chainId, dispatch)    // 🔵
+    } else {
+      // Clear contracts and zero balances when not on a supported chain                       // 🟡
+      dispatch(setTokenContracts([null, null]))                                               // 🟡
+      dispatch(setSymbols(['aUSDC']))                                                         // 🟡 (keep default symbol)
+      dispatch(balancesLoaded(['0', '0']))                                                    // 🟡
+      dispatch(setBridgeContracts([null, null]))                                              // 🟡
     }
   }
 

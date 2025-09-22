@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { Card, Button, Dropdown } from 'react-bootstrap';
 import { Gear } from "react-bootstrap-icons";
 import './TransferCard.css';
+import { balancesLoaded } from '../store/reducers/tokens'   // 🟡
 
 import {
   loadAccount,        // ✅ keep connect here
@@ -64,8 +65,9 @@ const TransferCard = () => {
   const balances = useSelector((state) => state.tokens.balances)
   const [sender, receiver] =
     useSelector((state) => state.bridge.contracts) || [null, null]
-  const bridgeState = useSelector((state) => state.bridge.bridging.isBridging)
 
+
+  const bridgeState = useSelector((state) => state.bridge.bridging) /* 🟡 */
   const isBridging = bridgeState.isBridging // 🔵
   const txHash = bridgeState.transactionHash // 🔵
   const bridgeError = bridgeState.error // 🔵
@@ -86,14 +88,18 @@ const TransferCard = () => {
   // ✅ locals used in onBridge (simple + readable)
   const defaultGasEth   = config.bridge?.defaultGasEth || '0.03'
   const receiverAddress = config['43113']?.receiverFuji || ''
-  const ausdcSepolia    = tokens?.[0] || null                    // ✅ NOW SAFE: tokens is already defined
+  const ausdcSepolia    = tokens?.[0] || null // ✅ NOW SAFE: tokens is already defined
   const isSupportedRoute =
     fromChain === 'Ethereum Sepolia' && toChain === 'Avalanche Fuji'
+  const selectionsOk = Boolean(fromChain && toChain && fromToken && toToken) /* 🟡 */
 
   // Validation
   const balanceFrom = Number(balances?.[0] || 0) // 🔵
   const amountNum   = Number(fromAmount || 0)    // 🔵
   const amountValid = amountNum > 0 && amountNum <= balanceFrom // 🔵
+
+  // Simple USD mirror w/ 2 decimals (no pricing, just echo) 🟡
+  const usd2 = (s) => (Number.parseFloat(String(s)) || 0).toFixed(2) /* 🟡 */
 
   // (optional UX) swap button
   const handleSwapTokens = () => {
@@ -111,12 +117,17 @@ const TransferCard = () => {
   // -------- Refresh balances when ready --------
   useEffect(() => {
     (async () => {
-      if (provider && tokens?.[0] && tokens?.[1] && account) {
-        await loadBalances(tokens, account, dispatch)              // ✅
-      }
+      if (!provider || !account) return                                        // 🟡
+      if (!isOnSepolia) {                                                      // 🟡
+        dispatch(balancesLoaded(['0', '0']))                                   // 🟡
+      return                                                                 // 🟡
+      }                                                                        // 🟡
+      if (tokens?.[0] && tokens?.[1]) {                                        // 🟡
+        await loadBalances(tokens, account, dispatch)                          // 🟡
+      }                                                                        // 🟡
     })()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [account, tokens, provider])
+  }, [account, tokens, provider, isOnSepolia])                                 // 🟡
 
   const onConnect = async () => {                                        // 🔵
     try {                                                                // 🔵
@@ -168,7 +179,8 @@ const TransferCard = () => {
       : 'Bridge'
 
   // Note: when !account, we hide the bridge UI and show a dedicated Connect button.
-  const ctaDisabled = isBridging || !isSupportedRoute || !isOnSepolia // 🔵
+  // const ctaDisabled = isBridging || !isSupportedRoute || !isOnSepolia // 🔵
+  const ctaDisabled = isBridging || !selectionsOk || !isSupportedRoute || !isOnSepolia /* 🟡 */
 
   // ===== Chain dropdown (Chain & Token dropdowns kept as in your file) =====
   const ChainSelect = ({ value, onChange, ariaLabel }) => {
@@ -246,7 +258,7 @@ const TransferCard = () => {
     const Toggle = React.forwardRef(({ onClick, ...props }, ref) => (
       <button
         ref={ref}
-        className="xy-token"
+        className={`xy-token ${!value ? 'xy-token--empty' : ''}`}          // 🟡
         type="button"
         aria-label={ariaLabel}
         aria-expanded={props['aria-expanded']}
@@ -361,7 +373,7 @@ const TransferCard = () => {
                 }} // 🔵
                 inputMode="decimal"
               />
-              <span className="xy-sub">≈ $ 0</span>
+              <span className="xy-sub">≈ $ {usd2(fromAmount)}</span> {/* 🟡 */}
             </div>
 
             {/* ✅ token dropdown */}
@@ -395,7 +407,7 @@ const TransferCard = () => {
                 onFocus={(e) => e.target.blur()}          // 🔵 prevent cursor
                 tabIndex={-1}                             // 🔵 skip in tab order
               />
-              <span className="xy-sub">≈ $ 0</span>
+              <span className="xy-sub">≈ $ {usd2(toAmount)}</span> {/* 🟡 */}
             </div>
 
             {/* ✅ token dropdown */}

@@ -6,7 +6,7 @@ import Blockies from 'react-blockies'
 import ThemeSwitcher from './ThemeSwitcher'
 import './Navigation.css';
 
-import logo from '../logo.png';
+import logo from '../logo.png';                                              // 🟡
 
 import { loadAccount } from '../store/interactions'
 
@@ -75,16 +75,19 @@ const Navigation = () => {
 
         {/* right: network + connect/account + theme */}
         <div className="d-flex align-items-center ms-auto gap-2">
-          <Form.Select
-            aria-label="Network Selector"
-            value={chainId ? `0x${chainId.toString(16)}` : '0'}
-            onChange={networkHandler}
-            style={{ width: 170 }}
-          >
-            <option value="0" disabled>Select Network</option>
-            <option value="0x7a69">Localhost</option> {/* 31337 */}
-            <option value="0xaa36a7">Sepolia</option> {/* 11155111 */}
-          </Form.Select>
+          <div className="net-select-wrap">                                           
+             <Form.Select                                                             
+               aria-label="Network Selector"                                          
+               value={chainId ? `0x${chainId.toString(16)}` : '0'}                    
+               onChange={networkHandler}
+               className={`net-select ${chainId === 11155111 ? 'select--with-eth' : ''}`}
+               style={{ width: 170 }}                     
+             >
+               <option value="0" disabled>Select Network</option>
+               <option value="0x7a69">Localhost</option> {/* 31337 */}
+               <option value="0xaa36a7">Sepolia</option> {/* 11155111 */}
+             </Form.Select>                                                                                                                         
+           </div>
 
           {account ? (
             <div className="d-flex align-items-center">

@@ -57,3 +57,25 @@
   outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
+
+/* ETH icon next to Sepolia select */ 🟡
+
+.eth-logo {                         /* 20×20 icon as requested */
+  width: 20px;                      /* 🟡 */
+  height: 20px;                     /* 🟡 */
+  display: block;                   /* 🟡 */
+}
+
+/* Keep native caret from Bootstrap; just add consistent padding */
+.net-select {
+  padding-left: 40px;
+  padding-right: 2rem;
+}
+
+/* On Sepolia, prepend the ETH icon; keep Bootstrap's caret via its CSS variable */
+.select--with-eth {
+  background-image: url('../eth.svg'), var(--bs-form-select-bg-img);
+  background-repeat: no-repeat, no-repeat;
+  background-position: 12px center, right .75rem center;
+  background-size: 20px 20px, var(--bs-form-select-bg-size, 16px 12px);
+}
