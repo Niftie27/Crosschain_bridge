@@ -1,9 +1,22 @@
+// src/components/TransferCard.js
+/**
+ * CHANGES (🟡):
+ * - 🟡 Added static contract links (Sepolia sender & Fuji receiver on Snowtrace + Avascan).
+ * - 🟡 Success & error Alerts (already added previously) kept and expanded.
+ * - 🟡 Added Toast notifications (success/failure) without polling.
+ * - 🟡 Added simple 3-step "progress" row (Submitted → Relaying → Executed); no polling.
+ * - 🟡 Shows Axelar GMP link and receiver contract explorers to help find Fuji tx.
+ * - 🟡 Uses Redux `destTxHash` placeholder if you ever set it later.
+ * - 🟡 CTA shows “Insufficient amount” and disables when balance too low.
+ */
+
+
 import React, { useState, useEffect } from 'react' 
 import { useDispatch, useSelector } from 'react-redux'
-import { Card, Button, Dropdown } from 'react-bootstrap';
+import { Card, Button, Dropdown, Modal } from 'react-bootstrap';
 import { Gear } from "react-bootstrap-icons";
 import './TransferCard.css';
-import { balancesLoaded } from '../store/reducers/tokens'   // 🟡
+import { balancesLoaded } from '../store/reducers/tokens'
 
 import {
   loadAccount,        // ✅ keep connect here
@@ -13,6 +26,7 @@ import {
 
 import config from '../config.json'     
 
+// ✅ chain metadata
 const CHAIN_META = {
   "Ethereum Sepolia": {
     name: "Ethereum Sepolia",
@@ -32,6 +46,32 @@ const TOKEN_META = {
     logo: 'https://assets.coingecko.com/coins/images/26476/standard/uausdc_D_3x.png',
   },
 };
+
+// Replace your StepPill with this
+const StepPill = ({ state, label, href }) => {
+  const cls =
+    state === 'done'    ? 'badge rounded-pill bg-success px-2 py-1 d-inline-flex align-items-center'
+  : state === 'pending' ? 'badge rounded-pill bg-warning text-dark px-2 py-1 d-inline-flex align-items-center'
+                        : 'badge rounded-pill bg-secondary px-2 py-1 d-inline-flex align-items-center';
+
+  return (
+    <span className={cls} style={{ marginRight: 8, lineHeight: 1 }}>
+      <span
+        className="me-1 d-inline-flex justify-content-center align-items-center"
+        style={{ width: '1em', height: '1em' }}
+      >
+        {state === 'pending'
+          ? <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" />
+          : state === 'done' ? '✓' : '•'}
+      </span>
+      {href
+        ? <a href={href} target="_blank" rel="noreferrer" className="text-reset text-decoration-none">
+            {label}
+          </a>
+        : label}
+    </span>
+  );
+};                                                                            // 🟡
 
 /* ---------------- Input helpers (beginner-friendly) ---------------- */
 // Allow . → 0., preserve trailing dot for typing, max 6 decimals
@@ -53,6 +93,63 @@ function normalizeAmountInput(s) {
   return v
 }
 
+// 🟡 Uniform Bootstrap pill using <a class="btn btn-..."> (no custom CSS)
+const StatusItem = ({ state, label, href }) => {
+  const variant =
+    state === 'done'    ? 'success' :
+    state === 'pending' ? 'warning' :
+                          'secondary';
+
+  const icon =
+    state === 'pending'
+      ? <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" />
+      : state === 'done'
+        ? '✓'
+        : '•';
+
+  const content = (
+    <>
+      <span
+        className="d-inline-flex justify-content-center align-items-center me-2"
+        style={{ width: '1rem' }}                // keeps all pills same width/height
+      >
+        {icon}
+      </span>
+      <span className={href ? 'text-decoration-none' : ''}>
+        {label}{href && <sup className="ms-1">↗</sup>}
+      </span>
+    </>
+  );
+
+  // anchor when clickable, span when not
+  return href ? (
+    <a
+      className={`btn btn-sm rounded-pill btn-${variant} d-inline-flex align-items-center`}
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      style={{ marginRight: 8 }}
+    >
+      {content}
+    </a>
+  ) : (
+    <span
+      className={`btn btn-sm rounded-pill btn-${variant} disabled d-inline-flex align-items-center`}
+      style={{ marginRight: 8 }}
+    >
+      {content}
+    </span>
+  );
+};
+
+const StatusRail = ({ s1, s2, s3, links }) => (
+  <div className="d-flex flex-wrap align-items-center">
+    <StatusItem state={s1} label="Sent"          href={links.etherscan} />
+    <StatusItem state={s2} label="Relayering (Axelar)"   href={links.axelar}    />
+    <StatusItem state={s3} label="Received"    href={links.snowtrace} />
+  </div>
+);
+
 const TransferCard = () => {
 
   const dispatch  = useDispatch()
@@ -68,11 +165,15 @@ const TransferCard = () => {
 
 
   const bridgeState = useSelector((state) => state.bridge.bridging) /* 🟡 */
-  const isBridging = bridgeState.isBridging // 🔵
-  const txHash = bridgeState.transactionHash // 🔵
+  const isBridging  = bridgeState.isBridging // 🔵
+  const txHash      = bridgeState.transactionHash       // Sepolia tx hash
+  const destTxHash  = bridgeState.destTxHash            // 🟡 Fuji tx hash (optional)
+  const stage       = bridgeState.stage                 // 🟡 'idle' | 'submitted' | 'executed' | 'failed'
   const bridgeError = bridgeState.error // 🔵
+  // 🟡 set relaying active only when Fuji tx exists
+  const relayingActive = Boolean(destTxHash)
 
-  const IS_SEPOLIA = Number(config?.chains?.sepolia ?? 11155111) // 🔵 read from config, fallback kept
+  const IS_SEPOLIA  = Number(config?.chains?.sepolia ?? 11155111) // 🔵 read from config, fallback kept
   const isOnSepolia = chainId === IS_SEPOLIA // 🔵
 
   // -------- Local UI state --------
@@ -83,11 +184,15 @@ const TransferCard = () => {
   const [fromChain,  setFromChain]  = useState(null)     // 🔵 start unselected
   const [toChain,    setToChain]    = useState(null)         // 🔵 start unselected
 
-  const [openMenu, setOpenMenu] = useState(null) // (unused; fine to keep or remove)
+  // 🟡 Toast controls
+  const [showOkToast, setShowOkToast] = useState(false)
+  const [showErrToast, setShowErrToast] = useState(false)
 
   // ✅ locals used in onBridge (simple + readable)
+  // 🟡 Links + addresses from config
   const defaultGasEth   = config.bridge?.defaultGasEth || '0.03'
   const receiverAddress = config['43113']?.receiverFuji || ''
+  const senderAddress   = config['11155111']?.senderSepolia || '' // 🟡 for contract links
   const ausdcSepolia    = tokens?.[0] || null // ✅ NOW SAFE: tokens is already defined
   const isSupportedRoute =
     fromChain === 'Ethereum Sepolia' && toChain === 'Avalanche Fuji'
@@ -96,12 +201,12 @@ const TransferCard = () => {
   // Validation
   const balanceFrom = Number(balances?.[0] || 0) // 🔵
   const amountNum   = Number(fromAmount || 0)    // 🔵
-  const amountValid = amountNum > 0 && amountNum <= balanceFrom // 🔵
+  const amountValid = amountNum > 0 && amountNum <= balanceFrom // ✅ used for CTA label + disabled
 
   // Simple USD mirror w/ 2 decimals (no pricing, just echo) 🟡
   const usd2 = (s) => (Number.parseFloat(String(s)) || 0).toFixed(2) /* 🟡 */
 
-  // (optional UX) swap button
+  // (optional UX) swap (both chains and tokens) button
   const handleSwapTokens = () => {
     setFromToken(toToken);
     setToToken(fromToken);
@@ -109,25 +214,18 @@ const TransferCard = () => {
     setToAmount(fromAmount);
     setFromChain(toChain);
     setToChain(fromChain);
-    setOpenMenu(null);
   };
 
   // ❌ Removed loading contracts here (App already did it)
   // ✅ Keep a minimal effect to refresh balances when account or token contracts present
   // -------- Refresh balances when ready --------
-  useEffect(() => {
-    (async () => {
-      if (!provider || !account) return                                        // 🟡
-      if (!isOnSepolia) {                                                      // 🟡
-        dispatch(balancesLoaded(['0', '0']))                                   // 🟡
-      return                                                                 // 🟡
-      }                                                                        // 🟡
-      if (tokens?.[0] && tokens?.[1]) {                                        // 🟡
-        await loadBalances(tokens, account, dispatch)                          // 🟡
-      }                                                                        // 🟡
-    })()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [account, tokens, provider, isOnSepolia])                                 // 🟡
+  // 🟡 App.js — live balance on new blocks (tiny + reliable)
+  useEffect(() => {                                            // 🟡
+    if (!provider || !account || !tokens?.[0]) return          // 🟡
+    const onBlock = () => loadBalances(tokens, account, dispatch) // 🟡
+    provider.on('block', onBlock)                              // 🟡
+    return () => provider.off('block', onBlock)                // 🟡
+  }, [provider, account, tokens])                              // 🟡                                // 🟡
 
   const onConnect = async () => {                                        // 🔵
     try {                                                                // 🔵
@@ -137,15 +235,15 @@ const TransferCard = () => {
     }                                                                    // 🔵
   }
 
+  // (kept) + 🟡 toasts
   const onBridge = async () => { // 🔵
     if (!account) { await onConnect(); return } // 🔵 early connect guard
-
     if (!provider || !sender || !ausdcSepolia) return
     if (!isSupportedRoute || !receiverAddress) return
     if (!amountValid) return
     if (!isOnSepolia) return // 🔵
 
-    const amt = normalizeAmountInput(fromAmount || '0') // 🔵
+    const amt = normalizeAmountInput(fromAmount || '0') // 🔵                                                                              // 🟡
 
     try {
       const { hash } = await bridgeAction(
@@ -159,30 +257,247 @@ const TransferCard = () => {
         receiverAddress,// USDCReceiver on Fuji
         dispatch        // dispatch last (AMM style)
       )
-
-      setToAmount(amt) // simple 1:1 reflection
-      // Optionally re-read balances after bridging:
-      // await loadBalances(tokensArr, account, dispatch)
-
-      // refresh balances on both chains
+      setToAmount(amt)
       await loadBalances(tokens, account, dispatch)
+      setShowOkToast(true)     // 🟡 toast success
     } catch (err) {
-      // no-op; error UI handled via Redux state // 🔵
+      setShowErrToast(true)    // 🟡 toast error
     }
   }
 
-  // ✅ button state/label (clean)
+  // CTA label with insufficient amount
   const ctaLabel = !account
     ? 'Connect Wallet'
     : isBridging
       ? 'Bridging...'
-      : 'Bridge'
+      : (!selectionsOk || !isSupportedRoute || !isOnSepolia)
+        ? 'Bridge'
+        : (!amountValid ? 'Insufficient amount' : 'Bridge')
 
   // Note: when !account, we hide the bridge UI and show a dedicated Connect button.
   // const ctaDisabled = isBridging || !isSupportedRoute || !isOnSepolia // 🔵
-  const ctaDisabled = isBridging || !selectionsOk || !isSupportedRoute || !isOnSepolia /* 🟡 */
+  const ctaDisabled =
+    isBridging ||
+    !selectionsOk ||
+    !isSupportedRoute ||
+    !isOnSepolia ||
+    !amountValid   // ✅ disable when insufficient amount
 
-  // ===== Chain dropdown (Chain & Token dropdowns kept as in your file) =====
+  // 🟡 Helpful links
+  const linkEtherscanTx        = txHash ? `https://sepolia.etherscan.io/tx/${txHash}` : null // 🟡
+  const linkAxelarGMP          = txHash ? `https://testnet.axelarscan.io/gmp/${txHash}` : null // 🟡
+  const linkSnowtraceTx        = destTxHash ? `https://testnet.snowtrace.io/tx/${destTxHash}` : null // 🟡
+  const linkSenderContract     = senderAddress ? `https://sepolia.etherscan.io/address/${senderAddress}` : null // 🟡
+  const linkReceiverSnowtrace  = receiverAddress ? `https://testnet.snowtrace.io/address/${receiverAddress}/tokentxns` : null // 🟡
+  const linkReceiverAvascan    = receiverAddress ? `https://testnet.avascan.info/blockchain/all/address/${receiverAddress}/transactions/erc20` : null // 🟡
+
+  // 🟡 Step states (simple + correct timings)
+  const s1 = txHash ? 'done' : 'idle';
+  const s2 = txHash && !destTxHash ? 'pending' : destTxHash ? 'done' : 'idle';
+  const s3 = destTxHash ? 'done' : 'idle';
+
+  // map links (null when not available)
+  const links = {
+    etherscan: linkEtherscanTx || null,
+    axelar:    linkAxelarGMP   || null,
+    snowtrace: linkSnowtraceTx || null
+  };
+
+
+  // 🟡 progress badge helper
+  const Step = ({active, label, href}) => (
+    <span className={`badge rounded-pill ${active ? 'bg-success' : 'bg-secondary'}`} style={{marginRight: 8}}>
+      {href ? <a href={href} target="_blank" rel="noreferrer" style={{ color:'#fff', textDecoration:'none' }}>{label}</a> : label}
+    </span>
+  ) // 🟡
+
+  return (
+    <div className="transfer-container" style={{ position: 'relative', zIndex: 1031 }}>
+
+      <Card className="xy-card">
+        <Card.Body className="xy-body">
+
+        {/* Show only connect button if wallet not connected */} {/* 🔵 */}
+        {!account ? ( // 🔵
+          <div className="d-flex flex-column align-items-center justify-content-center" style={{ minHeight: 240 }}> {/* 🔵 */}
+            <p className="mb-3">Connect your wallet to start bridging</p> {/* 🔵 */}
+            <Button className="xy-cta" onClick={onConnect}>Connect Wallet</Button> {/* 🔵 */}
+          </div> // 🔵
+        ) : ( // 🔵
+          <>
+
+          
+
+          {/* Header */}
+          <div className="xy-header">
+            <h3 className="xy-title">Transfer</h3>
+            <div className="xy-actions">
+
+              {/* 🟡 header additions, next to <Gear/> */}
+              <Dropdown align="end" className="ms-1">                                                   {/* 🟡 */}
+                <Dropdown.Toggle size="sm" variant="outline-secondary">Explorers</Dropdown.Toggle>      {/* 🟡 */}
+                <Dropdown.Menu>                                                                          {/* 🟡 */}
+                  <Dropdown.Item href={`https://sepolia.etherscan.io/address/${senderAddress}`} target="_blank"> {/* 🟡 */}
+                    Sender smart contract (Sepolia)                                                                     {/* 🟡 */}
+                  </Dropdown.Item>                                                                       
+                  <Dropdown.Item href={`https://testnet.snowtrace.io/address/${receiverAddress}/tokentxns`} target="_blank"> {/* 🟡 */}
+                    Receiver smart contract (Snowtrace)                                                                 {/* 🟡 */}
+                  </Dropdown.Item>                                                                       
+                  <Dropdown.Item href={`https://testnet.avascan.info/blockchain/all/address/${receiverAddress}/transactions/erc20`} target="_blank"> {/* 🟡 */}
+                    Receiver smart contract (Avascan)                                                                   {/* 🟡 */}
+                  </Dropdown.Item>                                                                       
+                  {txHash && (                                                                           
+                    <Dropdown.Item href={`https://testnet.axelarscan.io/gmp/${txHash}`} target="_blank">
+                      Axelar GMP                                                                          {/* 🟡 */}
+                    </Dropdown.Item>
+                  )}
+                </Dropdown.Menu>
+              </Dropdown>
+
+              <button className="xy-iconbtn" type="button" aria-label="Settings">
+                <Gear size={20} />
+              </button>
+              
+            </div>
+          </div>
+
+          
+
+          {/* Networks (chains) */}
+          <div className="xy-netbar">
+            <div className="xy-netcol">
+              <span className="xy-label">From</span>
+              <ChainSelect
+                value={fromChain}
+                onChange={setFromChain}
+                ariaLabel="Select from chain"
+              />
+              <div className="xy-help">{fromChain === 'Ethereum Sepolia' && balances?.[0] ? <small>Balance: {balances[0]} axlUSDC</small> : null}</div> {/* ✅ */}
+            </div>
+
+            <div className="xy-netcol">
+              <span className="xy-label">To</span>
+              <ChainSelect
+                value={toChain}
+                onChange={setToChain}
+                ariaLabel="Select to chain"
+              />
+              <div className="xy-help">{toChain === 'Avalanche Fuji' && balances?.[1] ? <small>Balance: {balances[1]} axlUSDC</small> : null}</div>   {/* ✅ */}
+            </div>
+          </div>
+
+          {/* FROM */}
+          <div className="xy-row">
+            <div className="xy-left">
+              <span className="xy-label">From</span>
+              <input
+                className="xy-amount"
+                placeholder="0.0"
+                value={fromAmount}
+                onChange={(e) => { // 🔵
+                  const v = normalizeAmountInput(e.target.value) 
+                  // 🔵 normalizeAmountInput not allowing negative numbers
+                  setFromAmount(v) // 🔵
+                  setToAmount(v) // 🔵
+                }} // 🔵
+                inputMode="decimal"
+              />
+              <span className="xy-sub">≈ $ {usd2(fromAmount)}</span> {/* 🟡 */}
+            </div>
+
+          {/* ✅ token dropdown */}
+            <TokenSelect
+              value={fromToken}
+              onChange={setFromToken}
+              ariaLabel="Select from token"
+            />
+          </div>
+
+          {/* swap button (mid-card) */}
+          <div className="xy-swap-wrap">
+            <button className="xy-swap" onClick={handleSwapTokens} aria-label="Swap">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="17,1 21,5 17,9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+                <polyline points="7,23 3,19 7,15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+              </svg>
+            </button>
+          </div>
+
+          {/* TO */}
+          <div className="xy-row">
+            <div className="xy-left">
+              <span className="xy-label">To</span>
+              <input
+                className="xy-amount"
+                placeholder="0.0"
+                value={toAmount}
+                readOnly                  // 🔵 
+                inputMode="decimal"
+                onFocus={(e) => e.target.blur()}          // 🔵 prevent cursor
+                tabIndex={-1}                             // 🔵 skip in tab order
+              />
+              <span className="xy-sub">≈ $ {usd2(toAmount)}</span> {/* 🟡 */}
+            </div>
+
+              {/* ✅ token dropdown */}
+              <TokenSelect
+                value={toToken}
+                onChange={setToToken}
+                ariaLabel="Select to token"
+              />
+            </div>
+
+            {/* Validation messages */}
+            {!isSupportedRoute && (
+              <div className="xy-error"><small>Only Sepolia → Fuji supported right now.</small></div>
+            )}
+            {!isOnSepolia && (
+              <div className="xy-error"><small>Wrong network. Please switch MetaMask to Sepolia.</small></div>
+            )}
+
+            {/* Progress */}
+            <div className="mt-3">
+              <div className="mb-1"><small>Progress:</small></div>
+              <StatusRail s1={s1} s2={s2} s3={s3} links={links} />
+            </div>
+
+          
+
+            
+
+            {/* Connect/Bridge/Insufficient amount button */}
+            <Button
+              className="xy-cta"
+              disabled={ctaDisabled}
+              onClick={!account ? onConnect : onBridge}
+              title={!isSupportedRoute ? 'Only Sepolia → Fuji supported right now' : undefined}
+            >
+              {ctaLabel}
+            </Button>
+
+            {/* 🟡 overlay “toast” modals */}
+            <Modal show={showOkToast}  onHide={() => setShowOkToast(false)}  centered>
+              <Modal.Header closeButton />
+              <Modal.Body>Submitted on Sepolia.
+                   <p></p>Check Axelarscan by clicking on Relayering (Axelar).
+                   <p></p>Relayering takes approx 15-20 minutes.
+              </Modal.Body>
+            </Modal>
+            <Modal show={showErrToast} onHide={() => setShowErrToast(false)} centered>
+              <Modal.Header closeButton />
+              <Modal.Body>Bridge transaction reverted.</Modal.Body>
+            </Modal>
+
+            </>
+          )}
+        </Card.Body>
+      </Card>
+    </div>
+  )
+}
+
+
+// ===== Chain dropdown (Chain & Token dropdowns kept as in your file) =====
   const ChainSelect = ({ value, onChange, ariaLabel }) => {
     const meta = value ? CHAIN_META[value] : null
 
@@ -308,171 +623,8 @@ const TransferCard = () => {
           </Dropdown.Item>
         </Dropdown.Menu>
       </Dropdown>
-    );
-  };
+    )
+  }
 
-  return (
-    <div className="transfer-container">
-      <Card className="xy-card">
-        <Card.Body className="xy-body">
-
-        {/* Show only connect button if wallet not connected */} {/* 🔵 */}
-        {!account ? ( // 🔵
-          <div className="d-flex flex-column align-items-center justify-content-center" style={{ minHeight: 240 }}> {/* 🔵 */}
-            <p className="mb-3">Connect your wallet to start bridging</p> {/* 🔵 */}
-            <Button className="xy-cta" onClick={onConnect}>Connect Wallet</Button> {/* 🔵 */}
-          </div> // 🔵
-        ) : ( // 🔵
-          <>
-          {/* Header */}
-          <div className="xy-header">
-            <h3 className="xy-title">Transfer</h3>
-            <div className="xy-actions">
-              <button className="xy-iconbtn" type="button" aria-label="Settings">
-                <Gear size={20} />
-              </button>
-            </div>
-          </div>
-
-          {/* Networks (chains) */}
-          <div className="xy-netbar">
-            <div className="xy-netcol">
-              <span className="xy-label">From</span>
-              <ChainSelect
-                value={fromChain}
-                onChange={setFromChain}
-                ariaLabel="Select from chain"
-              />
-              <div className="xy-help">{fromChain === 'Ethereum Sepolia' && balances?.[0] ? <small>Balance: {balances[0]} axlUSDC</small> : null}</div> {/* ✅ */}
-            </div>
-
-            <div className="xy-netcol">
-              <span className="xy-label">To</span>
-              <ChainSelect
-                value={toChain}
-                onChange={setToChain}
-                ariaLabel="Select to chain"
-              />
-              <div className="xy-help">{toChain === 'Avalanche Fuji' && balances?.[1] ? <small>Balance: {balances[1]} axlUSDC</small> : null}</div>   {/* ✅ */}
-            </div>
-          </div>
-
-          {/* FROM */}
-          <div className="xy-row">
-            <div className="xy-left">
-              <span className="xy-label">From</span>
-              <input
-                className="xy-amount"
-                placeholder="0.0"
-                value={fromAmount}
-                onChange={(e) => { // 🔵
-                  const v = normalizeAmountInput(e.target.value) 
-                  // 🔵 normalizeAmountInput not allowing negative numbers
-                  setFromAmount(v) // 🔵
-                  setToAmount(v) // 🔵
-                }} // 🔵
-                inputMode="decimal"
-              />
-              <span className="xy-sub">≈ $ {usd2(fromAmount)}</span> {/* 🟡 */}
-            </div>
-
-            {/* ✅ token dropdown */}
-            <TokenSelect
-              value={fromToken}
-              onChange={setFromToken}
-              ariaLabel="Select from token"
-            />
-          </div>
-
-          {/* swap button (mid-card) */}
-          <div className="xy-swap-wrap">
-            <button className="xy-swap" onClick={handleSwapTokens} aria-label="Swap">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="17,1 21,5 17,9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
-                <polyline points="7,23 3,19 7,15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
-              </svg>
-            </button>
-          </div>
-
-          {/* TO */}
-          <div className="xy-row">
-            <div className="xy-left">
-              <span className="xy-label">To</span>
-              <input
-                className="xy-amount"
-                placeholder="0.0"
-                value={toAmount}
-                readOnly                  // 🔵 
-                inputMode="decimal"
-                onFocus={(e) => e.target.blur()}          // 🔵 prevent cursor
-                tabIndex={-1}                             // 🔵 skip in tab order
-              />
-              <span className="xy-sub">≈ $ {usd2(toAmount)}</span> {/* 🟡 */}
-            </div>
-
-            {/* ✅ token dropdown */}
-            <TokenSelect
-              value={toToken}
-              onChange={setToToken}
-              ariaLabel="Select to token"
-            />
-          </div>
-
-            {/* Exchange rate */}
-            <div className="xy-meta">
-              <span>Exchange Rate</span>
-              <span>-</span>
-            </div>
-
-            {/* Validation messages */}
-            {!amountValid && (
-              <div className="xy-error"><small>Enter a valid amount ≤ balance.</small></div>
-            )}
-            {!isSupportedRoute && (
-              <div className="xy-error"><small>Only Sepolia → Fuji supported right now.</small></div>
-            )}
-            {!isOnSepolia && (
-              <div className="xy-error"><small>Wrong network. Please switch MetaMask to Sepolia.</small></div>
-            )}
-
-            {/* Connect/Bridge button */}
-            <Button
-              className="xy-cta"
-              disabled={ctaDisabled}
-              onClick={!account ? onConnect : onBridge}   // ✅ connect or bridge
-              title={!isSupportedRoute ? 'Only Sepolia → Fuji supported right now' : undefined}
-            >
-              {ctaLabel}
-            </Button>
-
-            {/* Status */} {/* 🔵 */}
-            {txHash && (
-              <div className="xy-help mt-2">
-                <small>
-                  Tx:&nbsp;
-                  <a
-                    href={`https://sepolia.etherscan.io/tx/${txHash}`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {txHash.slice(0, 10)}...{txHash.slice(-8)}
-                  </a>
-                </small>
-              </div>
-            )}
-            {bridgeError && (
-              <div className="xy-error mt-2">
-                <small>{bridgeError.message || 'Transaction failed'}</small>
-              </div>
-            )}
-          </>
-        )}
-
-
-        </Card.Body>
-      </Card>
-    </div>
-  );
-};
 
 export default TransferCard;

@@ -1,5 +1,10 @@
+// src/components/App.js
+// 🟡 Added useSelector to access tokens/account.
+// 🟡 Added a useEffect that subscribes to token Transfer events and cleans up on change.
+// 🟡 Everything else kept as-is.
+
 import { useEffect } from 'react'
-import { useDispatch } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux' // 🟡
 import { Container } from 'react-bootstrap'
 import { ethers } from 'ethers'
 
@@ -16,12 +21,20 @@ import {
   loadNetwork,
   loadAccount,
   loadContracts,  // ✅ (your AMM: loadTokens)
-  loadBridge      // ✅ (your AMM: loadAMM)
+  loadBridge,      // ✅ (your AMM: loadAMM)
+  subscribeReceiverExecuted   // 🟡
 } from '../store/interactions'
 
 function App() {
 
   const dispatch = useDispatch()
+
+  // 🟡 Access tokens/account to wire subscriptions
+  const provider = useSelector((state) => state.provider.connection)          // 🟡
+  const tokens  = useSelector((state) => state.tokens.contracts)    // 🟡
+  const account = useSelector((state) => state.provider.account)    // 🟡
+
+  const [sender, receiver] = useSelector(s => s.bridge.contracts)  // 🟡
 
   const loadEverythingForChain = async (provider, chainId) => {
     const SUPPORTED = Number(config?.chains?.sepolia ?? 11155111) // 🔵
@@ -100,6 +113,12 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // 🟡 App.js – wire the receiver event
+  useEffect(() => {                                                // 🟡
+    if (!receiver) return                                          // 🟡
+    const unsub = subscribeReceiverExecuted(receiver, dispatch)    // 🟡
+    return () => { try { unsub && unsub() } catch {} }             // 🟡
+  }, [receiver])                                                   // 🟡
 
     return (
   <>

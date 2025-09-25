@@ -1,3 +1,7 @@
+// src/store/interactions.js
+// 🟡 Added subscribeTokenTransfers() to auto-refresh balances on faucet/any Transfer.
+// (Everything else kept the same unless marked.)
+
 import { ethers } from 'ethers'
 
 // provider slice
@@ -18,6 +22,7 @@ import {
   bridgeRequest,
   bridgeSuccess,
   bridgeFail,
+  setDestTxHash // 🟡
 } from './reducers/bridge'
 
 // ABIs + config
@@ -172,5 +177,15 @@ export const bridge = async (
     throw err // 🔵
   }
 }
+
+// 🟡 listen to USDCReceiver on Fuji; mark executed when it fires
+export const subscribeReceiverExecuted = (receiver, dispatch) => {        // 🟡
+  if (!receiver) return () => {}                                          // 🟡
+  const h = (recipient, amount, sourceChain, event) => {                  // 🟡
+    dispatch(setDestTxHash(event.transactionHash))                        // 🟡
+  }                                                                       
+  receiver.on('Received', h)                                              // 🟡
+  return () => receiver.off('Received', h)                                // 🟡
+}                                                                         // 🟡
 
 

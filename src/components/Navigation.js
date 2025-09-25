@@ -61,16 +61,16 @@ const Navigation = () => {
       style={{
         position: 'sticky',
         top: 0,
-        zIndex: 2000,
+        zIndex: 1000,
         background: 'var(--bs-body-bg)',
-        borderBottom: '1px solid var(--nav-divider)'
+        borderBottom: '0.1px solid var(--nav-divider)'
       }}
     >
       <div className="w-100 d-flex align-items-center">
         {/* left: logo + brand */}
         <div className="d-flex align-items-center">
           <img alt="logo" src={logo} width="70" height="70" className="me-2" />
-          <Navbar.Brand className="mb-0">One-Click USDC Bridge</Navbar.Brand>
+          <Navbar.Brand className="mb-0">USDC Bridge (powered by Axelar)</Navbar.Brand>
         </div>
 
         {/* right: network + connect/account + theme */}
