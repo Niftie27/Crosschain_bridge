@@ -14,6 +14,8 @@ import { setBridgeContracts } from '../store/reducers/bridge'                   
 import Navigation from './Navigation';
 import Loading from './Loading';
 import TransferCard from './TransferCard';
+import Notifications from './Notifications';
+import Footer from './Footer'
 import config from '../config.json'; // <-- add this
 
 import {
@@ -22,7 +24,8 @@ import {
   loadAccount,
   loadContracts,  // ✅ (your AMM: loadTokens)
   loadBridge,      // ✅ (your AMM: loadAMM)
-  subscribeReceiverExecuted   // 🟡
+  subscribeReceiverExecuted,   // 🟡
+  loadBalances
 } from '../store/interactions'
 
 function App() {
@@ -34,7 +37,7 @@ function App() {
   const tokens  = useSelector((state) => state.tokens.contracts)    // 🟡
   const account = useSelector((state) => state.provider.account)    // 🟡
 
-  const [sender, receiver] = useSelector(s => s.bridge.contracts)  // 🟡
+  const [sender, receiver] = useSelector(state => state.bridge.contracts)  // 🟡
 
   const loadEverythingForChain = async (provider, chainId) => {
     const SUPPORTED = Number(config?.chains?.sepolia ?? 11155111) // 🔵
@@ -51,6 +54,7 @@ function App() {
     }
   }
 
+  // Bootstrap app: provider, network, contracts + listeners
   const loadBlockchainData = async () => {
     // Initiate provider
     const provider = await loadProvider(dispatch)
@@ -120,15 +124,22 @@ function App() {
     return () => { try { unsub && unsub() } catch {} }             // 🟡
   }, [receiver])                                                   // 🟡
 
-    return (
-  <>
-    <Navigation />
+  // Instant balance refresh when provider/account/tokens change
+  useEffect(() => {
+    if (provider && account && tokens?.[0]) {
+      loadBalances(tokens, account, dispatch)
+    }
+  }, [provider, account, tokens, dispatch])
 
-    <Container>
-      <TransferCard></TransferCard>
-    </Container>
-  </>
-  )
+  return (
+    <>
+      <Navigation />
+      <Container>
+        <TransferCard />
+      </Container>
+      <Footer />
+    </>
+  );
 }
 
 export default App;

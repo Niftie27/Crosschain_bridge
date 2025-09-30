@@ -68,8 +68,8 @@
 
 /* Keep native caret from Bootstrap; just add consistent padding */
 .net-select {
-  padding-left: 40px;
-  padding-right: 2rem;
+  padding-left: 35px;
+  padding-right: 1rem;
 }
 
 /* On Sepolia, prepend the ETH icon; keep Bootstrap's caret via its CSS variable */
@@ -79,3 +79,4 @@
   background-position: 12px center, right .75rem center;
   background-size: 20px 20px, var(--bs-form-select-bg-size, 16px 12px);
 }
+

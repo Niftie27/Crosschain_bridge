@@ -148,44 +148,64 @@ export const bridge = async (
     try {
       transaction = await ausdcSepolia.connect(signer).approve(sender.address, amount)
       await transaction.wait()
+      // 🟡 fire UI toast
+      if (typeof window !== 'undefined') window.dispatchEvent
+      (new CustomEvent('bridge:approved')) // 🟡
     } catch (error) {
       transaction = await ausdcSepolia.connect(signer).approve(sender.address, 0)
       await transaction.wait()
       transaction = await ausdcSepolia.connect(signer).approve(sender.address, amount)
       await transaction.wait()
+      // 🟡 fire UI toast
+      if (typeof window !== 'undefined') window.dispatchEvent
+      (new CustomEvent('bridge:approved', { detail: { hash: transaction.hash } })) // 🟡
     }
 
     // --- bridge call ---
     transaction = await sender.connect(signer).bridge(destChain, receiverAddress, recipient, amount, { value })
-    await transaction.wait()
+    
     const receipt = await transaction.wait()
+    if (receipt.status !== 1) {
+      if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('toast:reverted'))
+      const errPayload = { code: 'REVERTED', message: 'Bridge transaction reverted' }
+      dispatch(bridgeFail(errPayload))
+      throw new Error(errPayload.message)
+    }
+
+    // fire UI toasts immediately (no waiting)
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('toast:sent', {
+        detail: { link: `https://sepolia.etherscan.io/tx/${transaction.hash}` }
+      }))
+      window.dispatchEvent(new CustomEvent('toast:relaying', {
+        detail: { link: `https://testnet.axelarscan.io/gmp/${transaction.hash}` }
+      }))
+    }
 
     dispatch(bridgeSuccess(transaction.hash))
     return { hash: transaction.hash, receipt }
 
-  } catch (err) {
-    const errPayload = { // 🔵
-      code: err?.code, // 🔵
-      message:
-        err?.reason ||
-        err?.data?.message ||
-        err?.error?.message ||
-        err?.message ||
-        'Bridge failed'
-    } // 🔵
-    dispatch(bridgeFail(errPayload)) // 🔵
-    throw err // 🔵
+    } catch (err) {
+      const errPayload = {
+        code: err?.code,
+        message: err?.reason || err?.data?.message || err?.error?.message || err?.message || 'Bridge failed'
+      }
+      dispatch(bridgeFail(errPayload))
+      window.dispatchEvent(new CustomEvent('toast:reverted'))
+      throw err
+    }
   }
-}
 
-// 🟡 listen to USDCReceiver on Fuji; mark executed when it fires
-export const subscribeReceiverExecuted = (receiver, dispatch) => {        // 🟡
-  if (!receiver) return () => {}                                          // 🟡
-  const h = (recipient, amount, sourceChain, event) => {                  // 🟡
-    dispatch(setDestTxHash(event.transactionHash))                        // 🟡
-  }                                                                       
-  receiver.on('Received', h)                                              // 🟡
-  return () => receiver.off('Received', h)                                // 🟡
-}                                                                         // 🟡
-
-
+export const subscribeReceiverExecuted = (receiver, dispatch) => {
+    if (!receiver) return () => {}
+    const h = (recipient, amount, sourceChain, event) => {
+      dispatch(setDestTxHash(event.transactionHash))
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('toast:received', {
+          detail: { link: `https://testnet.snowtrace.io/tx/${event.transactionHash}` }
+        }))
+      }
+    }
+    receiver.on('Received', h)
+    return () => receiver.off('Received', h)
+  }                                                                     // 🟡

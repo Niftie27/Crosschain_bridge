@@ -40,7 +40,7 @@
   --border-2: rgba(0,0,0,.12);
 
   --ring: rgba(37,99,235,.35);
-  --shadow: 0 18px 50px rgba(2, 8, 23, .10);
+
 
   --brand-1: #2a6df6;
   --brand-2: #00c2ff;
@@ -52,30 +52,36 @@
 
 /* set this if you have a fixed navbar height (e.g. 64px) */
 :root {
-  --nav-offset: 0px;
+  --nav-offset: -25px;            /* sticky navbar height */
+  --footer-height: 56px;         /* your fixed footer height (approx) */
+
+  /* guaranteed scroll slack on big screens */
+  --scroll-top: clamp(160px, 15vh, 0px);
+  --scroll-bottom: calc(var(--footer-height) + -30px);
 }
 
 .transfer-container {
-  /* global scale (1 = original) */
-  --ui-scale: 1.15;
-  --card-width: 560px;            /* base width before scaling */
+  /* Responsive width for the card (no scale, no backdrop) */
+  --card-max: clamp(560px, 64vw, 720px);
 
-  width: 100%;
-  max-width: calc(var(--card-width) * var(--ui-scale));
+  position: fixed;                  /* <- pin it, no page scroll */
+  top: var(--nav-offset);           /* respect Navbar */
+  bottom: var(--footer-height);     /* respect Footer */
+  left: 0;
+  right: 0;
 
-  /* center in viewport */
-  min-height: calc(100dvh - var(--nav-offset));
   display: grid;
   place-items: center;
 
   margin: 0 auto;
-  padding: 24px 16px;
+  width: 100%;
+  max-width: var(--card-max);
 
-  /* nudge entire card up/down without affecting layout flow */
-  transform: translateY(var(--center-shift-y));
-  /* optional page background:
-  background: var(--page);
-  */
+  padding: 0 16px;                  /* small side gutters */
+  box-sizing: border-box;
+
+  background: transparent;
+  overflow: hidden;                 /* nothing scrolls here */
 }
 
 /* Scale the visual card and keep it centered */
@@ -97,10 +103,14 @@
   .transfer-container .xy-card { width: 100%; }
 }
 
+/* Add invisible spacers so the page can scroll past the card
+   — lets the card slide "into" the navbar/top and footer/bottom */
+
 /* a touch lower on wider screens (kept for consistency) */
 @media (min-width: 768px) {
   .transfer-container { /* centered by grid now */ }
 }
+
 
 /* ===============================
    CARD — rounder corners, soft shadow
@@ -109,21 +119,21 @@
 .transfer-card {
   background: var(--card) !important;
   border: 1px solid var(--border-2) !important;
-  border-radius: 22px;
-  box-shadow: var(--shadow);
+  border-radius: 18px;
   color: var(--text);
 }
 
+
 .xy-body,
 .transfer-card .card-body {
-  padding: 20px;
+  padding: 24px;                     /* +4px vs before */
 }
 
 /* ===============================
    COMMON ELEMENTS (if present)
    =============================== */
 .xy-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
-.xy-title  { margin:0; font-size:20px; line-height:24px; font-weight:600; color:var(--text); }
+.xy-title  { margin:0; font-size:25px; line-height:24px; font-weight:600; color:var(--text); }
 
 .xy-actions { display:flex; gap:8px; }
 
@@ -300,7 +310,7 @@ button.xy-iconbtn svg{
    Mid-card swap — add vertical space
    =============================== */
 .xy-swap-wrap { display:grid; place-items:center; margin:0; }      /* reset negative margin */
-.xy-row + .xy-swap-wrap { margin-top: 16px; }                       /* FROM → swap gap */
+.xy-row + .xy-swap-wrap { margin-top: -50px; }                       /* FROM → swap gap */
 .xy-swap-wrap + .xy-row { margin-top: 16px; }                       /* swap → TO gap */
 @media (min-width: 768px) {
   .xy-row + .xy-swap-wrap,
@@ -363,11 +373,7 @@ button.xy-iconbtn svg{
   .xy-cta { margin-top: 20px; }
 }
 
-/* Keep Exchange Rate tight to the TO row */
-.xy-row + .xy-meta {
-  margin-top: 8px;     /* small gap above the meta row */
-  padding-top: 1px;    /* light breathing room with the dashed border */
-}
+
 
 /* Push the Connect button farther down */
 .xy-cta {
@@ -419,6 +425,13 @@ button.xy-iconbtn svg{
 .xy-cta:hover { filter: brightness(1.06); }
 .xy-cta:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 
+/* Progress rail spacing */
+.mt-3 { margin-top: 1rem !important; } /* keep Bootstrap utility consistent */
+.xy-meta { margin-top: 10px; }
+
+/* CTA sits a touch lower for balance */
+.xy-cta { margin-top: 26px; }
+
 /* subtle border like navbar (theme-aware) */
 :root[data-bs-theme="dark"]  .xy-cta { border-color: rgba(255,255,255,.08) !important; }
 :root[data-bs-theme="light"] .xy-cta { border-color: rgba(0,0,0,.06) !important; }
@@ -443,8 +456,8 @@ button.xy-iconbtn svg{
 }
 .xy-row > .dropdown > .xy-token {
   width: 100%;
-  height: 53.73px;
-  min-height: 53.73px;
+  height: 52px;
+  min-height: 52px;
   padding: 8px 10px;
   box-sizing: border-box;
 }
@@ -469,6 +482,31 @@ button.xy-iconbtn svg{
   filter: grayscale(.25); 
   cursor: not-allowed; 
 } 
+
+@media (max-height: 780px) {
+  :root {
+    --scroll-bottom: calc(var(--footer-height) + 16px);
+  }
+}
+
+
+
+
+.xy-card,
+.transfer-card {
+  max-width: 100%;
+  max-height: 100%;
+  overflow: hidden;                 /* no internal scrolling */
+}
+
+
+
+/* === Disable ALL page scrolling === */
+html, body, #root {
+  height: 100dvh;
+  overflow: hidden;   /* no scrollbars */
+}
+
 
 
 

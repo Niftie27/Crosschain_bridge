@@ -1,16 +1,24 @@
 import { useSelector, useDispatch } from 'react-redux'
+import { useState, useEffect } from 'react'
+
 import Navbar from 'react-bootstrap/Navbar';
 import Button from 'react-bootstrap/Button'
 import Form from 'react-bootstrap/Form'
+import InputGroup from 'react-bootstrap/InputGroup';
+
 import Blockies from 'react-blockies'
 import ThemeSwitcher from './ThemeSwitcher'
 import './Navigation.css';
 
-import logo from '../logo.png';                                              // 🟡
+import logo from '../logo.png';   
+import ethLogo from '../eth.svg';                                           // 🟡
 
 import { loadAccount } from '../store/interactions'
 
 const Navigation = () => {
+
+  const [showApproval, setShowApproval] = useState(false) // popup state
+
   const chainId = useSelector(state => state.provider.chainId)
   const account = useSelector(state => state.provider.account)
 
@@ -53,17 +61,23 @@ const Navigation = () => {
     localStorage.getItem('theme') ||
     (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
 
+  useEffect(() => {
+    const onApproved = () => setShowApproval(true)
+    window.addEventListener('bridge:approved', onApproved)
+    return () => window.removeEventListener('bridge:approved', onApproved)
+  }, [])
+
   return (
     <Navbar
       expand="lg"
       sticky="top"
-      className="py-2"
+      className="py-2 sticky-top bg-body"
       style={{
         position: 'sticky',
         top: 0,
-        zIndex: 1000,
+        zIndex: 2000,                                  // NEW: keep navbar above the card
         background: 'var(--bs-body-bg)',
-        borderBottom: '0.1px solid var(--nav-divider)'
+
       }}
     >
       <div className="w-100 d-flex align-items-center">
@@ -73,9 +87,13 @@ const Navigation = () => {
           <Navbar.Brand className="mb-0">USDC Bridge (powered by Axelar)</Navbar.Brand>
         </div>
 
+        
+
         {/* right: network + connect/account + theme */}
-        <div className="d-flex align-items-center ms-auto gap-2">
+        
+        <div className="d-flex align-items-center ms-auto gap-2" style={{ position: 'relative' }}>
           <div className="net-select-wrap">                                           
+            
              <Form.Select                                                             
                aria-label="Network Selector"                                          
                value={chainId ? `0x${chainId.toString(16)}` : '0'}                    
@@ -86,7 +104,9 @@ const Navigation = () => {
                <option value="0" disabled>Select Network</option>
                <option value="0x7a69">Localhost</option> {/* 31337 */}
                <option value="0xaa36a7">Sepolia</option> {/* 11155111 */}
-             </Form.Select>                                                                                                                         
+             </Form.Select>
+             
+                                                                                                                                 
            </div>
 
           {account ? (
