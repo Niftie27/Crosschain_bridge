@@ -1,23 +1,19 @@
 import { useSelector, useDispatch } from 'react-redux'
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 
 import Navbar from 'react-bootstrap/Navbar';
 import Button from 'react-bootstrap/Button'
 import Form from 'react-bootstrap/Form'
-import InputGroup from 'react-bootstrap/InputGroup';
 
 import Blockies from 'react-blockies'
 import ThemeSwitcher from './ThemeSwitcher'
 import './Navigation.css';
 
 import logo from '../logo.png';   
-import ethLogo from '../eth.svg';                                           // 🟡
 
 import { loadAccount } from '../store/interactions'
 
 const Navigation = () => {
-
-  const [showApproval, setShowApproval] = useState(false) // popup state
 
   const chainId = useSelector(state => state.provider.chainId)
   const account = useSelector(state => state.provider.account)
@@ -57,12 +53,8 @@ const Navigation = () => {
     }
   }
 
-  const theme =
-    localStorage.getItem('theme') ||
-    (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-
   useEffect(() => {
-    const onApproved = () => setShowApproval(true)
+    const onApproved = () => {}
     window.addEventListener('bridge:approved', onApproved)
     return () => window.removeEventListener('bridge:approved', onApproved)
   }, [])

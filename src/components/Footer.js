@@ -8,6 +8,8 @@ import {
   Github
 } from 'react-bootstrap-icons';
 
+import config from '../config.json'; // ⬅️ pull verified addresses
+
 export default function Footer() {
   // put your real profile URLs here
   const links = {
@@ -33,16 +35,43 @@ export default function Footer() {
     </a>
   );
 
-  return (
-    <footer className="fixed-bottom z-0" // 👈 add z-0
-      style={{ background: 'var(--bs-body-bg)' }}
-    >
-      <div className="container">
-        <div
-          className="d-flex align-items-center justify-content-between pt-3 pb-3"
-        >
-          <p className="mb-0 text-body-secondary">© 2025 Company, Inc</p>
+  const sender = config["11155111"]?.senderSepolia;
+  const receiver = config["43113"]?.receiverFuji;
 
+  return (
+    <footer className="fixed-bottom z-0" style={{ background: 'var(--bs-body-bg)' }}>
+      <div className="container">
+        {/* top row: © | contracts | social */}
+        <div className="d-flex align-items-center justify-content-between pt-3 pb-2 flex-wrap gap-2">
+          <p className="mb-0 text-body-secondary">© 2025</p>
+
+          {/* Contracts center */}
+          <div className="position-absolute start-50 translate-middle-x">
+            <div className="d-flex align-items-center gap-3 small">
+              <span className="text-body-secondary">Contracts:</span>
+
+              <a
+                href={`https://sepolia.etherscan.io/address/${sender}#code`}
+                target="_blank"
+                rel="noreferrer"
+                className="badge rounded-pill text-decoration-none bg-success-subtle text-success-emphasis border border-success-subtle"
+                title="USDCSender (Sepolia) – Verified on Etherscan"
+              >
+                Sender (Sepolia) ↗
+              </a>
+
+              <a
+                href={`https://testnet.snowtrace.io/address/${receiver}#code`}
+                target="_blank"
+                rel="noreferrer"
+                className="badge rounded-pill text-decoration-none bg-success-subtle text-success-emphasis border border-success-subtle"
+                title="USDCReceiver (Fuji) – Verified on Snowtrace"
+              >
+                Receiver (Fuji) ↗
+              </a>
+            </div>
+          </div>
+          {/* Social right */}
           <div className="d-flex gap-2">
             <IconBtn href={links.facebook}  label="Facebook"><Facebook size={18} /></IconBtn>
             <IconBtn href={links.instagram} label="Instagram"><Instagram size={18} /></IconBtn>
@@ -52,6 +81,9 @@ export default function Footer() {
             <IconBtn href={links.github}    label="GitHub"><Github size={18} /></IconBtn>
           </div>
         </div>
+
+        {/* optional thin divider */}
+        <div className="border-top" style={{ opacity: 0.1 }} />
       </div>
     </footer>
   );

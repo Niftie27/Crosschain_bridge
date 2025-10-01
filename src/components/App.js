@@ -6,15 +6,12 @@
 import { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux' // 🟡
 import { Container } from 'react-bootstrap'
-import { ethers } from 'ethers'
 
 // Components
 import { setTokenContracts, setSymbols, balancesLoaded } from '../store/reducers/tokens'   // 🟡
 import { setBridgeContracts } from '../store/reducers/bridge'                               // 🟡
 import Navigation from './Navigation';
-import Loading from './Loading';
 import TransferCard from './TransferCard';
-import Notifications from './Notifications';
 import Footer from './Footer'
 import config from '../config.json'; // <-- add this
 
@@ -37,7 +34,7 @@ function App() {
   const tokens  = useSelector((state) => state.tokens.contracts)    // 🟡
   const account = useSelector((state) => state.provider.account)    // 🟡
 
-  const [sender, receiver] = useSelector(state => state.bridge.contracts)  // 🟡
+  const receiver = useSelector(state => state.bridge.contracts[1])  // 🟡
 
   const loadEverythingForChain = async (provider, chainId) => {
     const SUPPORTED = Number(config?.chains?.sepolia ?? 11155111) // 🔵

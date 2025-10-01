@@ -13,11 +13,10 @@
 
 import React, { useState, useEffect } from 'react' 
 import { useDispatch, useSelector } from 'react-redux'
-import { Card, Button, Dropdown, Modal, ToastContainer, Toast } from 'react-bootstrap';
+import { Card, Button, Dropdown } from 'react-bootstrap';
 import { Gear } from "react-bootstrap-icons";
 import './TransferCard.css';
 import Notifications from './Notifications'; // add at top
-import { balancesLoaded } from '../store/reducers/tokens'
 
 import {
   loadAccount,        // ✅ keep connect here
@@ -48,31 +47,7 @@ const TOKEN_META = {
   },
 };
 
-// Replace your StepPill with this
-const StepPill = ({ state, label, href }) => {
-  const cls =
-    state === 'done'    ? 'badge rounded-pill bg-success px-2 py-1 d-inline-flex align-items-center'
-  : state === 'pending' ? 'badge rounded-pill bg-warning text-dark px-2 py-1 d-inline-flex align-items-center'
-                        : 'badge rounded-pill bg-secondary px-2 py-1 d-inline-flex align-items-center';
-
-  return (
-    <span className={cls} style={{ marginRight: 8, lineHeight: 1 }}>
-      <span
-        className="me-1 d-inline-flex justify-content-center align-items-center"
-        style={{ width: '1em', height: '1em' }}
-      >
-        {state === 'pending'
-          ? <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" />
-          : state === 'done' ? '✓' : '•'}
-      </span>
-      {href
-        ? <a href={href} target="_blank" rel="noreferrer" className="text-reset text-decoration-none">
-            {label}
-          </a>
-        : label}
-    </span>
-  );
-};                                                                            // 🟡
+                                                                         // 🟡
 
 /* ---------------- Input helpers (beginner-friendly) ---------------- */
 // Allow . → 0., preserve trailing dot for typing, max 6 decimals
@@ -161,18 +136,14 @@ const TransferCard = () => {
   const chainId  = useSelector((state) => state.provider.chainId) // 🔵
   const tokens   = useSelector((state) => state.tokens.contracts)     // ✅ MOVED ABOVE any usage
   const balances = useSelector((state) => state.tokens.balances)
-  const [sender, receiver] =
-    useSelector((state) => state.bridge.contracts) || [null, null]
+  const [sender] = useSelector((state) => state.bridge.contracts) || [];
 
 
   const bridgeState = useSelector((state) => state.bridge.bridging) /* 🟡 */
   const isBridging  = bridgeState.isBridging // 🔵
   const txHash      = bridgeState.transactionHash       // Sepolia tx hash
   const destTxHash  = bridgeState.destTxHash            // 🟡 Fuji tx hash (optional)
-  const stage       = bridgeState.stage                 // 🟡 'idle' | 'submitted' | 'executed' | 'failed'
-  const bridgeError = bridgeState.error // 🔵
-  // 🟡 set relaying active only when Fuji tx exists
-  const relayingActive = Boolean(destTxHash)
+
 
   const IS_SEPOLIA  = Number(config?.chains?.sepolia ?? 11155111) // 🔵 read from config, fallback kept
   const isOnSepolia = chainId === IS_SEPOLIA // 🔵
@@ -185,19 +156,11 @@ const TransferCard = () => {
   const [fromChain,  setFromChain]  = useState(null)     // 🔵 start unselected
   const [toChain,    setToChain]    = useState(null)         // 🔵 start unselected
 
-  // 🟡 Toast (successful + reverted tx)
-  const [showOkToast, setShowOkToast] = useState(false)
-  const [showErrToast, setShowErrToast] = useState(false)
-
-  // 🟡 Approval Toast (successful)
-  const [showApproval, setShowApproval] = useState(false) // 🟡
-  const [approvalHash, setApprovalHash] = useState(null)   // 🟡
-
   // ✅ locals used in onBridge (simple + readable)
   // 🟡 Links + addresses from config
   const defaultGasEth   = config.bridge?.defaultGasEth || '0.03'
   const receiverAddress = config['43113']?.receiverFuji || ''
-  const senderAddress   = config['11155111']?.senderSepolia || '' // 🟡 for contract links
+
   const ausdcSepolia    = tokens?.[0] || null // ✅ NOW SAFE: tokens is already defined
   const isSupportedRoute =
     fromChain === 'Ethereum Sepolia' && toChain === 'Avalanche Fuji'
@@ -232,15 +195,15 @@ const TransferCard = () => {
     return () => provider.off('block', onBlock)                // 🟡
   }, [provider, account, tokens])                              // 🟡                                // 🟡
 
-  // 🟡 listen for the event from interactions.js
-  useEffect(() => {                                        // 🟡
-    const onApproved = (e) => {                            // 🟡
-      setApprovalHash(e.detail?.hash || null)              // 🟡
-      setShowApproval(true)                                // 🟡
-    }                                                      // 🟡
-    window.addEventListener('bridge:approved', onApproved) // 🟡
-    return () => window.removeEventListener('bridge:approved', onApproved) // 🟡
-  }, [])                                                   // 🟡
+  // Listen for "bridge:approved" → no need to set local state
+  useEffect(() => {
+    const onApproved = (e) => {
+      // forward the event so Notifications.js can catch it
+      window.dispatchEvent(new CustomEvent('bridge:approved', { detail: { hash: e.detail?.hash } }))
+    }
+    window.addEventListener('bridge:approved', onApproved)
+    return () => window.removeEventListener('bridge:approved', onApproved)
+  }, [])                                               // 🟡
 
   const onConnect = async () => {                                        // 🔵
     try {                                                                // 🔵
@@ -262,21 +225,24 @@ const TransferCard = () => {
 
     try {
       const { hash } = await bridgeAction(
-        provider,       // ethers.Web3Provider
-        account,        // wallet
-        sender,         // USDCSender
-        ausdcSepolia,   // aUSDC (Sepolia)
-        amt,            // amount
-        defaultGasEth,  // axelar prepay (simple default)
-        account,        // recipient = wallet
-        receiverAddress,// USDCReceiver on Fuji
-        dispatch        // dispatch last (AMM style)
+        provider,
+        account,
+        sender,
+        ausdcSepolia,
+        amt,
+        defaultGasEth,
+        account,         // recipient = wallet
+        receiverAddress, // Fuji receiver
+        dispatch
       )
       setToAmount(amt)
       await loadBalances(tokens, account, dispatch)
-      setShowOkToast(true)     // 🟡 toast success
+
+      // instead of local setShowOkToast(true):
+      window.dispatchEvent(new CustomEvent('toast:sent', { detail: { link: `https://sepolia.etherscan.io/tx/${hash}` } }))
     } catch (err) {
-      setShowErrToast(true)    // 🟡 toast error
+      // instead of local setShowErrToast(true):
+      window.dispatchEvent(new CustomEvent('toast:reverted'))
     }
   }
 
@@ -302,9 +268,6 @@ const TransferCard = () => {
   const linkEtherscanTx        = txHash ? `https://sepolia.etherscan.io/tx/${txHash}` : null // 🟡
   const linkAxelarGMP          = txHash ? `https://testnet.axelarscan.io/gmp/${txHash}` : null // 🟡
   const linkSnowtraceTx        = destTxHash ? `https://testnet.snowtrace.io/tx/${destTxHash}` : null // 🟡
-  const linkSenderContract     = senderAddress ? `https://sepolia.etherscan.io/address/${senderAddress}` : null // 🟡
-  const linkReceiverSnowtrace  = receiverAddress ? `https://testnet.snowtrace.io/address/${receiverAddress}/tokentxns` : null // 🟡
-  const linkReceiverAvascan    = receiverAddress ? `https://testnet.avascan.info/blockchain/all/address/${receiverAddress}/transactions/erc20` : null // 🟡
 
   // 🟡 Step states (simple + correct timings)
   const s1 = txHash ? 'done' : 'idle';
@@ -317,14 +280,6 @@ const TransferCard = () => {
     axelar:    linkAxelarGMP   || null,
     snowtrace: linkSnowtraceTx || null
   };
-
-
-  // 🟡 progress badge helper
-  const Step = ({active, label, href}) => (
-    <span className={`badge rounded-pill ${active ? 'bg-success' : 'bg-secondary'}`} style={{marginRight: 8}}>
-      {href ? <a href={href} target="_blank" rel="noreferrer" style={{ color:'#fff', textDecoration:'none' }}>{label}</a> : label}
-    </span>
-  ) // 🟡
 
   return (
     // outermost wrapper div of TransferCard
