@@ -5,10 +5,10 @@ import {
   Twitter,
   Google,
   Linkedin,
-  Github
+  Github,
 } from 'react-bootstrap-icons';
 
-import config from '../config.json'; // ⬅️ pull verified addresses
+import config from '../config.json'; // pull verified addresses
 
 export default function Footer() {
   // put your real profile URLs here
@@ -18,7 +18,7 @@ export default function Footer() {
     twitter:   'https://twitter.com',
     google:    'https://google.com',
     linkedin:  'https://linkedin.com',
-    github:    'https://github.com'
+    github:    'https://github.com',
   };
 
   // tiny helper for a rounded icon button
@@ -35,18 +35,19 @@ export default function Footer() {
     </a>
   );
 
-  const sender = config["11155111"]?.senderSepolia;
-  const receiver = config["43113"]?.receiverFuji;
+  const sender   = config['11155111']?.senderSepolia;
+  const receiver = config['43113']?.receiverFuji;
 
   return (
     <footer className="fixed-bottom z-0" style={{ background: 'var(--bs-body-bg)' }}>
       <div className="container">
         {/* top row: © | contracts | social */}
-        <div className="d-flex align-items-center justify-content-between pt-3 pb-2 flex-wrap gap-2">
+        <div className="d-flex align-items-center justify-content-between pt-3 pb-2 flex-wrap gap-2 position-relative">
+          {/* left © */}
           <p className="mb-0 text-body-secondary">© 2025</p>
 
-          {/* Contracts center */}
-          <div className="position-absolute start-50 translate-middle-x">
+          {/* center contracts */}
+          <div className="position-absolute start-50 translate-middle-x" style={{ minWidth: 'max-content' }}>
             <div className="d-flex align-items-center gap-3 small">
               <span className="text-body-secondary">Contracts:</span>
 
@@ -71,8 +72,9 @@ export default function Footer() {
               </a>
             </div>
           </div>
-          {/* Social right */}
-          <div className="d-flex gap-2">
+
+          {/* right socials */}
+          <div className="d-flex gap-2 ms-auto">
             <IconBtn href={links.facebook}  label="Facebook"><Facebook size={18} /></IconBtn>
             <IconBtn href={links.instagram} label="Instagram"><Instagram size={18} /></IconBtn>
             <IconBtn href={links.twitter}   label="Twitter"><Twitter size={18} /></IconBtn>
@@ -88,5 +90,3 @@ export default function Footer() {
     </footer>
   );
 }
-
-
