@@ -119,7 +119,7 @@ function App() {
     if (!receiver) return                                          // 🟡
     const unsub = subscribeReceiverExecuted(receiver, dispatch)    // 🟡
     return () => { try { unsub && unsub() } catch {} }             // 🟡
-  }, [receiver])                                                   // 🟡
+  }, [receiver, dispatch])                                                   // 🟡
 
   // Instant balance refresh when provider/account/tokens change
   useEffect(() => {

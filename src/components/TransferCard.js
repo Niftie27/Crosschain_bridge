@@ -193,7 +193,7 @@ const TransferCard = () => {
     const onBlock = () => loadBalances(tokens, account, dispatch) // 🟡
     provider.on('block', onBlock)                              // 🟡
     return () => provider.off('block', onBlock)                // 🟡
-  }, [provider, account, tokens])                              // 🟡                                // 🟡
+  }, [provider, account, tokens, dispatch])                              // 🟡                                // 🟡
 
   // Listen for "bridge:approved" → no need to set local state
   useEffect(() => {
