@@ -73,12 +73,11 @@ npx hardhat run scripts/deploy-receiver.js --network fuji
 npm run start
 ```
 
-ℹ️ Why these edits?
-The frontend pulls addresses from src/config.json.
-The receiver deploy script reads SEPOLIA_SENDER_ADDR to lock the trusted source.
-
-Open http://localhost:3000
-connect MetaMask on Sepolia, enter amount, click Bridge, and track progress (Etherscan → Axelar → Snowtrace).
+## Why these edits?
+- The frontend pulls addresses from src/config.json.
+- The receiver deploy script reads SEPOLIA_SENDER_ADDR to lock the trusted source.
+- Open http://localhost:3000
+- connect MetaMask on Sepolia, enter amount, click Bridge, and track progress (Etherscan → Axelar → Snowtrace).
 💧 Need test tokens? Use the Faucet button.
 💨 Need gas? Just a little Sepolia ETH — most of it will be refunded automatically.
 
@@ -87,7 +86,6 @@ connect MetaMask on Sepolia, enter amount, click Bridge, and track progress (Eth
 ## 🔍 Explorers
 
 **Ethereum Sepolia:** [sepolia.etherscan.io](https://sepolia.etherscan.io/) 
-
 **Avalanche Fuji:** [snowtrace.io](https://snowtrace.io/)
 
 
