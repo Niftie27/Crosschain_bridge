@@ -86,7 +86,7 @@ npm run start
 
 ## 🔍 Explorers
 
-**Ethereum Sepolia:** [Etherscan]([https://axelar-crosschain-bridge.netlify.app/](https://sepolia.etherscan.io/))  
+**Ethereum Sepolia:** [sepolia.etherscan.io](https://sepolia.etherscan.io/))  
 Avalanche Fuji
 **Avalanche Fuji:**
 
