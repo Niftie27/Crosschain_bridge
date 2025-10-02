@@ -53,33 +53,29 @@ Transactions can be tracked on **Etherscan**, **Axelarscan**, and **Snowtrace**.
 
 ### 1. Install 
 ```bash
-# 1) Clone & install
 git clone https://github.com/yourname/usdc-crosschain-bridge.git
 cd usdc-crosschain-bridge
 npm install
 
-# 2) Deploy USDCSender on Sepolia
+# Deploy USDCSender on Sepolia
 npx hardhat run scripts/deploy-sender.js --network sepolia
 # 👉 Copy the printed SENDER address, then update:
 #    - src/config.json : set 11155111.senderSepolia = "<SENDER_ADDRESS>"
 #    - .env            : set SEPOLIA_SENDER_ADDR=<SENDER_ADDRESS>
 
-# 3) Deploy USDCReceiver on Fuji
+# Deploy USDCReceiver on Fuji
 npx hardhat run scripts/deploy-receiver.js --network fuji
 # 👉 Copy the printed RECEIVER address, then update:
 #    - src/config.json : set 43113.receiverFuji = "<RECEIVER_ADDRESS>"
 #    - .env            : set FUJI_RECEIVER_ADDR=<RECEIVER_ADDRESS>
 
-# 4) Start the app
-npm start
+# Start the app
+npm run start
 
-# Open the app
-# http://localhost:3000
-# - Connect MetaMask on Sepolia
-# - Enter amount and click Bridge
-# - Track progress on Etherscan → Axelar → Snowtrace
-# Notes:
-# - Need test tokens? Use the Faucet (Discord) button in the UI.
-# - Need gas? Keep a little Sepolia ETH; unused destination gas is refunded automatically.
+## ℹ️ Why these edits?
+
+- The frontend pulls addresses from src/config.json.
+- The receiver deploy script reads SEPOLIA_SENDER_ADDR to lock the trusted source.
+
 
 
