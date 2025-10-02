@@ -1,7 +1,6 @@
 USDC Cross-Chain Bridge 🌉
 
 👉 Live Demo: axelar-crosschain-bridge.netlify.app
-
 💧 Use the Faucet (Discord) button in the UI to get test tokens.
 
 A full-stack dApp to bridge Axelar-wrapped USDC (aUSDC) between Ethereum Sepolia and Avalanche Fuji using Axelar GMP (relayer).
