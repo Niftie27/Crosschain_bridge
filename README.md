@@ -71,6 +71,7 @@ npx hardhat run scripts/deploy-receiver.js --network fuji
 
 # Start the app
 npm run start
+```
 
 ℹ️ Why these edits?
 
