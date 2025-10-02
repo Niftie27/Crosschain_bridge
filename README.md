@@ -78,16 +78,18 @@ npm run start
 - The receiver deploy script reads SEPOLIA_SENDER_ADDR to lock the trusted source.
 - Open http://localhost:3000
 - connect MetaMask on Sepolia, enter amount, click Bridge, and track progress (Etherscan → Axelar → Snowtrace).
-💧 Need test tokens? Use the Faucet button.
-💨 Need gas? Just a little Sepolia ETH — most of it will be refunded automatically.
+- 💧 Need test tokens? Use the Faucet button.
+- 💨 Need gas? Just a little Sepolia ETH — most of it will be refunded automatically.
 
 ---
 
 ## 🔍 Explorers
 
 **Ethereum Sepolia:** [sepolia.etherscan.io](https://sepolia.etherscan.io/) 
-**Avalanche Fuji:** [snowtrace.io](https://snowtrace.io/)
 
+**Avalanche Fuji:** [snowtrace.io](https://testnet.snowtrace.io/)
+
+**Axelar GMP Scan:** [testnet.axelarscan.io](https://testnet.axelarscan.io/)
 
 
 
