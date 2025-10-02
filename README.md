@@ -86,9 +86,11 @@ npm run start
 
 ## 🔍 Explorers
 
-**Ethereum Sepolia:** [sepolia.etherscan.io](https://sepolia.etherscan.io/))  
-Avalanche Fuji
-**Avalanche Fuji:**
+**Ethereum Sepolia:** [sepolia.etherscan.io](https://sepolia.etherscan.io/) 
+
+**Avalanche Fuji:** [snowtrace.io](https://snowtrace.io/)
+
+
 
 
 
