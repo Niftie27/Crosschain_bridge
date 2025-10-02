@@ -1,7 +1,9 @@
 USDC Cross-Chain Bridge 🌉
 
 👉 Live Demo: axelar-crosschain-bridge.netlify.app
+
 💧 Use the Faucet (Discord) button in the UI to get test tokens.
+
 
 A full-stack dApp to bridge Axelar-wrapped USDC (aUSDC) between Ethereum Sepolia and Avalanche Fuji using Axelar GMP (relayer).
 
@@ -12,6 +14,7 @@ Frontend: React + Redux, Bootstrap UI
 Backend/Infra: Hardhat, Ethers.js, Axelar GMP SDK
 
 Stack: Solidity 0.8.20, OpenZeppelin v5, React, Redux, Bootstrap, Ethers.js, Hardhat, Netlify
+
 
 📖 Overview
 
