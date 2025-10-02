@@ -72,7 +72,7 @@ npx hardhat run scripts/deploy-receiver.js --network fuji
 # Start the app
 npm run start
 
-## ℹ️ Why these edits?
+ℹ️ Why these edits?
 
 - The frontend pulls addresses from src/config.json.
 - The receiver deploy script reads SEPOLIA_SENDER_ADDR to lock the trusted source.
