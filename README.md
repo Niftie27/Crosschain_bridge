@@ -2,9 +2,9 @@
 
 👉 **Live Demo:** [axelar-crosschain-bridge.netlify.app](https://axelar-crosschain-bridge.netlify.app/)  
 
-💧 Use the **Faucet (Discord)** button in the UI to get test tokens.  
-
 A full-stack dApp to bridge **Axelar-wrapped USDC (aUSDC)** between **Ethereum Sepolia** and **Avalanche Fuji** using **Axelar GMP (relayer)**.  
+
+💧 Use the **Faucet (Discord)** button in the UI to get test tokens.  
 
 ---
 
@@ -51,6 +51,35 @@ Transactions can be tracked on **Etherscan**, **Axelarscan**, and **Snowtrace**.
 
 > You already have `.env` in the repo. We’ll only **update two values** after deployments; no new file needed.  
 
-### 1. Install dependencies  
+### 1. Install 
 ```bash
+# 1) Clone & install
+git clone https://github.com/yourname/usdc-crosschain-bridge.git
+cd usdc-crosschain-bridge
 npm install
+
+# 2) Deploy USDCSender on Sepolia
+npx hardhat run scripts/deploy-sender.js --network sepolia
+# 👉 Copy the printed SENDER address, then update:
+#    - src/config.json : set 11155111.senderSepolia = "<SENDER_ADDRESS>"
+#    - .env            : set SEPOLIA_SENDER_ADDR=<SENDER_ADDRESS>
+
+# 3) Deploy USDCReceiver on Fuji
+npx hardhat run scripts/deploy-receiver.js --network fuji
+# 👉 Copy the printed RECEIVER address, then update:
+#    - src/config.json : set 43113.receiverFuji = "<RECEIVER_ADDRESS>"
+#    - .env            : set FUJI_RECEIVER_ADDR=<RECEIVER_ADDRESS>
+
+# 4) Start the app
+npm start
+
+# Open the app
+# http://localhost:3000
+# - Connect MetaMask on Sepolia
+# - Enter amount and click Bridge
+# - Track progress on Etherscan → Axelar → Snowtrace
+# Notes:
+# - Need test tokens? Use the Faucet (Discord) button in the UI.
+# - Need gas? Keep a little Sepolia ETH; unused destination gas is refunded automatically.
+
+
