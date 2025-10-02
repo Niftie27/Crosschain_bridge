@@ -8,7 +8,7 @@ A full-stack dApp to bridge **Axelar-wrapped USDC (aUSDC)** between **Ethereum S
 
 ---
 
-- **Smart Contracts**: `USDCSender` (Sepolia) + `USDCReceiver` (Fuji)  
+- **Smart Contracts**: `USDCSender` (Sepolia) + `USDCReceiver` (Fuji)  - checkout in demo website footer under the transfer card
 - **Frontend**: React + Redux, Bootstrap UI  
 - **Backend/Infra**: Hardhat, Ethers.js, Axelar GMP SDK  
 - **Stack**: Solidity 0.8.20, OpenZeppelin v5, React, Redux, Bootstrap, Ethers.js, Hardhat, Netlify  
