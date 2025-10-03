@@ -55,7 +55,7 @@ Transactions can be tracked on **Etherscan**, **Axelarscan**, and **Snowtrace**.
 
 ### 1. Install 
 ```bash
-git clone https://github.com/yourname/usdc-crosschain-bridge.git
+git clone https://github.com/Niftie27/usdc-crosschain-bridge.git
 cd usdc-crosschain-bridge
 npm install
 
