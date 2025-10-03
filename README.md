@@ -55,8 +55,8 @@ Transactions can be tracked on **Etherscan**, **Axelarscan**, and **Snowtrace**.
 
 ### 1. Install 
 ```bash
-git clone https://github.com/Niftie27/usdc-crosschain-bridge.git
-cd usdc-crosschain-bridge
+git clone https://github.com/Niftie27/Crosschain_bridge.git
+cd Crosschain_bridge
 npm install
 
 # Deploy USDCSender on Sepolia
