@@ -9,6 +9,7 @@ A full-stack dApp to bridge **Axelar-wrapped USDC (aUSDC)** between **Ethereum S
 
 ---
 
+## 🛠️ Tech Stack 
 - **Smart Contracts**: `USDCSender` (Sepolia) + `USDCReceiver` (Fuji)  
   Links to contracts in the footer on the demo site. Both are verified and published.
 - **Frontend**: React + Redux, Bootstrap UI  
@@ -40,18 +41,10 @@ Transactions can be tracked on **Etherscan**, **Axelarscan**, and **Snowtrace**.
 
 ---
 
-## 🛠️ Tech Stack  
-
-- **Contracts:** Solidity `0.8.20`, OpenZeppelin v5, Axelar GMP SDK  
-- **Frontend:** React 18, Redux Toolkit, React-Bootstrap, Ethers.js  
-- **Dev Tools:** Hardhat, Mocha/Chai  
-- **Infra:** Netlify hosting, Alchemy RPC  
-
----
-
 ## 🧑‍💻 Run Locally (frontend + testnets)  
 
-> You already have `.env` in the repo. We’ll only **update two values** after deployments; no new file needed.  
+> You already have `.env` in the repo. We’ll only **update two values** after deployments; no new file needed.
+> Also don't forget to use your private key in .env
 
 ### 1. Install 
 ```bash
