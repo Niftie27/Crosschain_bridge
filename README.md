@@ -1,6 +1,6 @@
 # USDC Cross-Chain Bridge 🌉  
 
-👉 **Live demo:** [axelar-crosschain-bridge.netlify.app](https://axelar-crosschain-bridge.netlify.app/)
+👉 **Live demo:** [axelar-crosschain-bridge.netlify.app](https://axelar-crosschain-bridge.netlify.app/)  
 🎥 **Demo walkthrough video:** [Watch on YouTube](https://www.youtube.com/watch?v=DDRcuVsVzdU)
 
 A full-stack dApp to bridge **Axelar-wrapped USDC (aUSDC)** between **Ethereum Sepolia** and **Avalanche Fuji** using **Axelar GMP (relayer)**.  
